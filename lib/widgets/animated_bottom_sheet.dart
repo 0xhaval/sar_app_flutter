@@ -62,19 +62,22 @@ class _AnimatedSheetContentState extends State<_AnimatedSheetContent>
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            12,
-            20,
-            MediaQuery.of(context).viewInsets.bottom + 20,
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +116,7 @@ class _AnimatedSheetContentState extends State<_AnimatedSheetContent>
                             widget.subtitle!,
                             style: const TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF6B7280),
+                              color: Color(0xFF353535),
                             ),
                           ),
                         ],
@@ -135,6 +138,7 @@ class _AnimatedSheetContentState extends State<_AnimatedSheetContent>
             ),
           ),
         ),
+      ),
       ),
     );
   }

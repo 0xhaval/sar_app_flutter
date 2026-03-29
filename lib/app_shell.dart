@@ -95,7 +95,7 @@ class _AppShellState extends State<AppShell> {
                     isActive ? activeIcon : icon,
                     key: ValueKey<bool>(isActive),
                     size: 24,
-                    color: isActive ? const Color(0xFF2563EB) : const Color(0xFF6B7280),
+                    color: isActive ? const Color(0xFF284A63) : const Color(0xFF353535),
                   ),
                 ),
               ),
@@ -104,7 +104,7 @@ class _AppShellState extends State<AppShell> {
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: 12,
-                  color: isActive ? const Color(0xFF2563EB) : const Color(0xFF6B7280),
+                  color: isActive ? const Color(0xFF284A63) : const Color(0xFF353535),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
                 child: Text(label),
