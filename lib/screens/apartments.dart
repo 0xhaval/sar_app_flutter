@@ -109,10 +109,39 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     bool hasMaidRoom = false;
     List<File> selectedImages = [];
 
-    final apartmentTypes = ['Studio', '1BR', '2BR', '3BR', '4BR', 'Penthouse', 'Duplex', 'Villa'];
+    // Amenities
+    bool hasElevator = false;
+    bool hasSecurity = false;
+    bool hasSwimmingPool = false;
+    bool hasPrivateGarden = false;
+    bool hasKidsPlayArea = false;
+    bool hasCoveredParking = false;
+    bool hasAirConditioning = false;
+    bool petsAllowed = false;
+    bool hasLandlinePhone = false;
+    bool hasKitchenAppliances = false;
+    bool hasWaterMeter = false;
+    bool hasElectricityMeter = false;
+    bool hasNaturalGasMeter = false;
+
+    // Listing & Payment
+    String? selectedPaymentMethod;
+    bool directFromOwner = false;
+    final cashPriceController = TextEditingController();
+    final downPaymentController = TextEditingController();
+    final monthlyInstallmentController = TextEditingController();
+    String selectedInstallmentFrequency = 'Monthly';
+    final installmentYearsController = TextEditingController();
+    final totalInstallmentPriceController = TextEditingController();
+    final paymentMethodOptions = ['Cash', 'Installments'];
+    final paymentMethodLabels = {'Cash': 'نقدي', 'Installments': 'أقساط'};
+    final frequencyOptions = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'];
+    final frequencyLabels = {'Monthly': 'شهري', 'Quarterly': 'ربع سنوي', 'Semi-Annual': 'نصف سنوي', 'Annual': 'سنوي'};
+
+    final apartmentTypes = ['Studio', '1BR', '2BR', '3BR', '4BR', 'Penthouse', 'Duplex', 'Villa', 'Furnished Apartment', 'Chalet', 'Land', 'Building', 'Commercial', 'Administrative', 'Medical', 'Other'];
     final statusOptions = ['Vacant', 'Occupied', 'Under Maintenance', 'Reserved', 'Sold'];
     final furnishingOptions = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
-    final viewOptions = ['Street', 'Garden', 'Pool', 'Sea', 'City', 'Internal'];
+    final viewOptions = ['Main Street', 'Side Street', 'Corner', 'Back', 'Garden', 'Pool', 'Sea', 'City', 'Internal', 'Nile', 'Golf', 'Plaza', 'Club', 'Lake', 'Other'];
 
     final statusLabels = {
       'Vacant': 'شاغرة',
@@ -127,12 +156,21 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
       'Fully Furnished': 'مفروشة بالكامل',
     };
     final viewLabels = {
-      'Street': 'شارع',
+      'Main Street': 'شارع رئيسي',
+      'Side Street': 'شارع جانبي',
+      'Corner': 'ناصية',
+      'Back': 'خلفي',
       'Garden': 'حديقة',
       'Pool': 'مسبح',
       'Sea': 'بحر',
       'City': 'مدينة',
       'Internal': 'داخلي',
+      'Nile': 'نيل',
+      'Golf': 'غولف',
+      'Plaza': 'ساحة',
+      'Club': 'نادي',
+      'Lake': 'بحيرة',
+      'Other': 'أخرى',
     };
 
     showAnimatedBottomSheet(
@@ -267,6 +305,32 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                   ),
                 ]),
 
+                // --- Amenities Section ---
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text('المرافق', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildAmenityChip('مصعد', hasElevator, (v) => setSheetState(() => hasElevator = v)),
+                    _buildAmenityChip('أمن', hasSecurity, (v) => setSheetState(() => hasSecurity = v)),
+                    _buildAmenityChip('مسبح', hasSwimmingPool, (v) => setSheetState(() => hasSwimmingPool = v)),
+                    _buildAmenityChip('حديقة خاصة', hasPrivateGarden, (v) => setSheetState(() => hasPrivateGarden = v)),
+                    _buildAmenityChip('ألعاب أطفال', hasKidsPlayArea, (v) => setSheetState(() => hasKidsPlayArea = v)),
+                    _buildAmenityChip('موقف مغطى', hasCoveredParking, (v) => setSheetState(() => hasCoveredParking = v)),
+                    _buildAmenityChip('تكييف مركزي', hasAirConditioning, (v) => setSheetState(() => hasAirConditioning = v)),
+                    _buildAmenityChip('حيوانات أليفة', petsAllowed, (v) => setSheetState(() => petsAllowed = v)),
+                    _buildAmenityChip('هاتف أرضي', hasLandlinePhone, (v) => setSheetState(() => hasLandlinePhone = v)),
+                    _buildAmenityChip('أجهزة مطبخ', hasKitchenAppliances, (v) => setSheetState(() => hasKitchenAppliances = v)),
+                    _buildAmenityChip('عداد ماء', hasWaterMeter, (v) => setSheetState(() => hasWaterMeter = v)),
+                    _buildAmenityChip('عداد كهرباء', hasElectricityMeter, (v) => setSheetState(() => hasElectricityMeter = v)),
+                    _buildAmenityChip('عداد غاز', hasNaturalGasMeter, (v) => setSheetState(() => hasNaturalGasMeter = v)),
+                  ],
+                ),
+
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
@@ -291,6 +355,75 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                   const SizedBox(width: 12),
                   Expanded(child: _buildField('الإيجار الشهري', rentController, '750000', isNumber: true)),
                 ]),
+
+                // --- Listing & Payment Section ---
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text('الإدراج والدفع', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('طريقة الدفع', style: TextStyle(fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: selectedPaymentMethod,
+                          hint: const Text('اختر'),
+                          isExpanded: true,
+                          items: paymentMethodOptions.map((p) => DropdownMenuItem(value: p, child: Text(paymentMethodLabels[p] ?? p))).toList(),
+                          onChanged: (v) => setSheetState(() => selectedPaymentMethod = v),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SwitchListTile(
+                      title: const Text('مباشر من المالك', style: TextStyle(fontSize: 14)),
+                      value: directFromOwner,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (v) => setSheetState(() => directFromOwner = v),
+                    ),
+                  ),
+                ]),
+                if (selectedPaymentMethod == 'Cash') ...[
+                  const SizedBox(height: 12),
+                  _buildField('السعر النقدي', cashPriceController, '500000', isNumber: true),
+                ],
+                if (selectedPaymentMethod == 'Installments') ...[
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _buildField('الدفعة الأولى', downPaymentController, '100000', isNumber: true)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildField('قسط شهري', monthlyInstallmentController, '25000', isNumber: true)),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('تكرار الدفع', style: TextStyle(fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: selectedInstallmentFrequency,
+                            isExpanded: true,
+                            items: frequencyOptions.map((f) => DropdownMenuItem(value: f, child: Text(frequencyLabels[f] ?? f))).toList(),
+                            onChanged: (v) => setSheetState(() => selectedInstallmentFrequency = v ?? 'Monthly'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildField('المدة (سنوات)', installmentYearsController, '5', isNumber: true)),
+                  ]),
+                  const SizedBox(height: 12),
+                  _buildField('السعر الإجمالي (تقسيط)', totalInstallmentPriceController, '750000', isNumber: true),
+                ],
 
                 const SizedBox(height: 16),
                 const Divider(),
@@ -394,6 +527,29 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                           'status': selectedStatus,
                           'monthly_rent': double.tryParse(rentController.text) ?? 0,
                           'notes': notesController.text,
+                          // Amenities
+                          'has_elevator': hasElevator ? 1 : 0,
+                          'has_security': hasSecurity ? 1 : 0,
+                          'has_swimming_pool': hasSwimmingPool ? 1 : 0,
+                          'has_private_garden': hasPrivateGarden ? 1 : 0,
+                          'has_kids_play_area': hasKidsPlayArea ? 1 : 0,
+                          'has_covered_parking': hasCoveredParking ? 1 : 0,
+                          'has_air_conditioning': hasAirConditioning ? 1 : 0,
+                          'pets_allowed': petsAllowed ? 1 : 0,
+                          'has_landline_phone': hasLandlinePhone ? 1 : 0,
+                          'has_kitchen_appliances': hasKitchenAppliances ? 1 : 0,
+                          'has_water_meter': hasWaterMeter ? 1 : 0,
+                          'has_electricity_meter': hasElectricityMeter ? 1 : 0,
+                          'has_natural_gas_meter': hasNaturalGasMeter ? 1 : 0,
+                          // Listing & Payment
+                          'payment_method': selectedPaymentMethod,
+                          'direct_from_owner': directFromOwner ? 1 : 0,
+                          'cash_price': double.tryParse(cashPriceController.text) ?? 0,
+                          'down_payment': double.tryParse(downPaymentController.text) ?? 0,
+                          'monthly_installment': double.tryParse(monthlyInstallmentController.text) ?? 0,
+                          'installment_frequency': selectedInstallmentFrequency,
+                          'installment_years': int.tryParse(installmentYearsController.text) ?? 0,
+                          'total_installment_price': double.tryParse(totalInstallmentPriceController.text) ?? 0,
                         };
 
                         if (uploadedDocs.isNotEmpty) {
@@ -429,6 +585,20 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
         const SizedBox(height: 8),
         TextField(controller: controller, keyboardType: isNumber ? TextInputType.number : TextInputType.text, decoration: InputDecoration(hintText: hint)),
       ],
+    );
+  }
+
+  Widget _buildAmenityChip(String label, bool selected, ValueChanged<bool> onSelected) {
+    return FilterChip(
+      label: Text(label, style: TextStyle(fontSize: 13, color: selected ? Colors.white : const Color(0xFF374151))),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: const Color(0xFF16A34A),
+      checkmarkColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F4F6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
