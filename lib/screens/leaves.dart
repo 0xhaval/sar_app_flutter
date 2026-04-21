@@ -12,6 +12,20 @@ class LeavesScreen extends StatefulWidget {
   State<LeavesScreen> createState() => _LeavesScreenState();
 }
 
+const Map<String, String> kLeaveTypeLabels = {
+  'Annual': 'إجازة سنوية',
+  'Sick': 'إجازة مرضية',
+  'Personal': 'إجازة شخصية',
+  'Maternity': 'إجازة أمومة',
+  'Paternity': 'إجازة أبوة',
+  'Unpaid': 'إجازة بدون راتب',
+};
+
+String leaveTypeArabic(String? type) {
+  if (type == null || type.isEmpty) return '';
+  return kLeaveTypeLabels[type] ?? type;
+}
+
 class _LeavesScreenState extends State<LeavesScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _leaves = [];
@@ -27,9 +41,9 @@ class _LeavesScreenState extends State<LeavesScreen> {
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
-        ApiService.call('get_leaves'),
-        ApiService.call('get_leave_balance'),
-        ApiService.call('get_leave_types'),
+        ApiService.getJson('/api/mobile/leaves'),
+        ApiService.getJson('/api/mobile/leaves/balance'),
+        ApiService.getJson('/api/mobile/leaves/types'),
       ]);
 
       if (!mounted) return;
@@ -67,7 +81,12 @@ class _LeavesScreenState extends State<LeavesScreen> {
                 DropdownButtonFormField<String>(
                   initialValue: selectedType,
                   decoration: const InputDecoration(hintText: 'اختر النوع'),
-                  items: _leaveTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  items: _leaveTypes
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(leaveTypeArabic(t)),
+                          ))
+                      .toList(),
                   onChanged: (v) => setSheetState(() => selectedType = v),
                 ),
                 const SizedBox(height: 16),
@@ -124,7 +143,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
                     onPressed: () async {
                       if (selectedType != null && fromController.text.isNotEmpty && toController.text.isNotEmpty) {
                         try {
-                          await ApiService.call('create_leave', params: {
+                          await ApiService.postJson('/api/mobile/leaves', body: {
                             'leave_type': selectedType,
                             'from_date': fromController.text,
                             'to_date': toController.text,
@@ -266,7 +285,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(balance['leave_type'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.white)),
+                              Text(leaveTypeArabic(balance['leave_type']?.toString()), style: const TextStyle(fontSize: 14, color: Colors.white)),
                               Text('${remaining.toStringAsFixed(0)}/${total.toStringAsFixed(0)} يوم', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
                             ],
                           ),
@@ -322,7 +341,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(leave['leave_type'] ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                                            Text(leaveTypeArabic(leave['leave_type']?.toString()), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
                                             const SizedBox(height: 4),
                                             Row(
                                               children: [

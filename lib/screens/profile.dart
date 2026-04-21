@@ -23,10 +23,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadData() async {
     try {
-      final data = await ApiService.call('get_profile');
+      final data = await ApiService.getJson('/api/mobile/me');
       if (!mounted) return;
+
+      final user = (data is Map ? data['user'] as Map? : null) ?? {};
+      final employee = (data is Map ? data['employee'] as Map? : null);
+      final company = (data is Map ? data['company'] as String? : null) ?? '';
+
+      final flat = <String, dynamic>{
+        'display_name': employee?['fullName'] ?? user['name'] ?? '',
+        'employee_name': employee?['fullName'] ?? user['name'] ?? '',
+        'designation': employee?['position'] ?? '',
+        'employee_id': employee?['employeeCode'] ?? '',
+        'display_email': employee?['email'] ?? user['email'] ?? '',
+        'display_phone': employee?['phone'] ?? '',
+        'department': employee?['department'] ?? '',
+        'date_of_joining': (employee?['hireDate'] ?? '').toString().split('T').first,
+        'company': company,
+      };
+
       setState(() {
-        _profile = Map<String, dynamic>.from(data);
+        _profile = flat;
         _loading = false;
       });
     } catch (e) {

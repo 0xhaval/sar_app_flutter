@@ -4,134 +4,119 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://sar-iq.com';
-  static const String _apiBase = '$baseUrl/api/method/sar_app.api.mobile';
+  // Base URL for the Next.js backend (real-estate-app).
+  // Override at build time:
+  //   flutter run --dart-define=API_BASE_URL=https://your-host
+  // Default: Android emulator → host machine.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:3000',
+  );
 
-  static Future<Map<String, String>> _getHeaders() async {
+  static Future<Map<String, String>> _getHeaders({bool json = true}) async {
     final prefs = await SharedPreferences.getInstance();
-    final apiKey = prefs.getString('api_key') ?? '';
-    final apiSecret = prefs.getString('api_secret') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final headers = <String, String>{
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
+      if (json) 'Content-Type': 'application/json',
     };
-
-    if (apiKey.isNotEmpty && apiSecret.isNotEmpty) {
-      headers['Authorization'] = 'token $apiKey:$apiSecret';
+    if (token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
-
     return headers;
   }
 
-  static Future<dynamic> call(String method, {Map<String, dynamic>? params}) async {
-    final headers = await _getHeaders();
-    final uri = Uri.parse('$_apiBase.$method');
-
-    final response = await http.post(
-      uri,
-      headers: headers,
-      body: params != null ? jsonEncode(params) : null,
+  static Uri _uri(String path, [Map<String, dynamic>? query]) {
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    final qs = query?.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+    return Uri.parse('$baseUrl$cleanPath').replace(
+      queryParameters: qs?.isEmpty == true ? null : qs,
     );
-
-    print('[API] $method → ${response.statusCode}');
-    print('[API] Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['exc'] != null) {
-        print('[API] Exception: ${data['exc']}');
-        throw ApiException(data['exc_type'] ?? 'Server Error', response.statusCode);
-      }
-      return data['message'];
-    } else if (response.statusCode == 401 || response.statusCode == 403) {
-      throw ApiException('غير مصرح', response.statusCode);
-    } else {
-      String message = 'حدث خطأ في الاتصال';
-      try {
-        final data = jsonDecode(response.body);
-        message = data['message'] ?? data['exc_type'] ?? message;
-      } catch (_) {}
-      throw ApiException(message, response.statusCode);
-    }
   }
 
-  /// Upload a file to Frappe and return the file URL.
-  static Future<String> uploadFile(File file) async {
-    final headers = await _getHeaders();
-    headers.remove('Content-Type'); // multipart sets its own
+  static dynamic _parseBody(http.Response response) {
+    final code = response.statusCode;
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
+      body = null;
+    }
+    if (code >= 200 && code < 300) {
+      return body is Map && body.containsKey('data') ? body['data'] : body;
+    }
+    if (code == 401 || code == 403) {
+      final msg = (body is Map ? body['error'] as String? : null) ?? 'غير مصرح';
+      throw ApiException(msg, code);
+    }
+    final msg =
+        (body is Map ? body['error'] as String? : null) ?? 'حدث خطأ في الاتصال';
+    throw ApiException(msg, code);
+  }
 
-    final uri = Uri.parse('$baseUrl/api/method/upload_file');
-    final request = http.MultipartRequest('POST', uri)
+  static Future<dynamic> getJson(String path,
+      {Map<String, dynamic>? query}) async {
+    final headers = await _getHeaders();
+    final response = await http.get(_uri(path, query), headers: headers);
+    return _parseBody(response);
+  }
+
+  static Future<dynamic> postJson(String path,
+      {Map<String, dynamic>? body}) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      _uri(path),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    return _parseBody(response);
+  }
+
+  static Future<dynamic> deleteJson(String path) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(_uri(path), headers: headers);
+    return _parseBody(response);
+  }
+
+  static Future<dynamic> patchJson(String path,
+      {Map<String, dynamic>? body}) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(
+      _uri(path),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    return _parseBody(response);
+  }
+
+  /// Uploads a file to /api/mobile/upload. Returns the public URL.
+  static Future<String> uploadFile(File file) async {
+    final headers = await _getHeaders(json: false);
+
+    final request = http.MultipartRequest('POST', _uri('/api/mobile/upload'))
       ..headers.addAll(headers)
-      ..fields['is_private'] = '0'
-      ..fields['folder'] = 'Home/Attachments'
       ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final fileUrl = data['message']?['file_url'] as String?;
-      if (fileUrl == null) throw ApiException('فشل رفع الملف', 200);
-      return fileUrl;
-    } else {
+    final data = _parseBody(response);
+    final url = (data is Map ? data['url'] as String? : null);
+    if (url == null || url.isEmpty) {
       throw ApiException('فشل رفع الملف', response.statusCode);
     }
+    return url;
   }
 
-  /// Fetch documents from Frappe's built-in /api/resource/ endpoint.
-  static Future<List<Map<String, dynamic>>> getList(
-    String doctype, {
-    List<String> fields = const ['name'],
-    String? orderBy,
-    int limitPageLength = 0,
-  }) async {
-    final headers = await _getHeaders();
-    final queryParams = <String, String>{
-      'fields': jsonEncode(fields),
-      if (orderBy != null) 'order_by': orderBy,
-      'limit_page_length': '$limitPageLength',
-    };
-    final uri = Uri.parse('$baseUrl/api/resource/$doctype')
-        .replace(queryParameters: queryParams);
-
-    final response = await http.get(uri, headers: headers);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final list = data['data'] as List? ?? [];
-      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } else if (response.statusCode == 401 || response.statusCode == 403) {
-      throw ApiException('غير مصرح', response.statusCode);
-    } else {
-      throw ApiException('حدث خطأ في الاتصال', response.statusCode);
-    }
-  }
-
-  static Future<dynamic> login(String usr, String pwd) async {
-    final uri = Uri.parse('$_apiBase.login');
+  /// Login — returns {token, user, employee}.
+  static Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
-      uri,
+      _uri('/api/mobile/auth/login'),
       headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: jsonEncode({'usr': usr, 'pwd': pwd}),
+      body: jsonEncode({'email': email, 'password': password}),
     );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['exc'] != null) {
-        throw ApiException(data['exc_type'] ?? 'Login failed', response.statusCode);
-      }
-      return data['message'];
-    } else {
-      String message = 'فشل تسجيل الدخول';
-      try {
-        final data = jsonDecode(response.body);
-        message = data['message'] ?? message;
-      } catch (_) {}
-      throw ApiException(message, response.statusCode);
-    }
+    final data = _parseBody(response);
+    return Map<String, dynamic>.from(data as Map);
   }
 }
 

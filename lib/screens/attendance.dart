@@ -36,8 +36,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     try {
       final now = DateTime.now();
       final results = await Future.wait([
-        ApiService.call('get_attendance', params: {'month': now.month, 'year': now.year}),
-        ApiService.call('get_today_checkins'),
+        ApiService.getJson('/api/mobile/attendance',
+            query: {'month': now.month, 'year': now.year}),
+        ApiService.getJson('/api/mobile/attendance/today'),
       ]);
 
       final attendanceList = List<Map<String, dynamic>>.from(results[0] ?? []);
@@ -95,7 +96,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
 
   Future<void> _handleCheckIn() async {
     try {
-      final result = await ApiService.call('checkin');
+      final result = await ApiService.postJson('/api/mobile/attendance/checkin');
       final time = _formatTime(result['time'] ?? '');
       setState(() {
         _checkedIn = true;
@@ -112,7 +113,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
 
   Future<void> _handleCheckOut() async {
     try {
-      final result = await ApiService.call('checkout');
+      final result = await ApiService.postJson('/api/mobile/attendance/checkout');
       final time = _formatTime(result['time'] ?? '');
       setState(() => _checkedIn = false);
       Fluttertoast.showToast(msg: 'تم تسجيل الانصراف في $time');
@@ -174,7 +175,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                     onPressed: () async {
                       if (dateController.text.isNotEmpty && reasonController.text.isNotEmpty) {
                         try {
-                          await ApiService.call('create_attendance_request', params: {
+                          await ApiService.postJson('/api/mobile/attendance/requests', body: {
                             'reason': '${selectedType ?? ''}: ${reasonController.text}',
                             'attendance_date': dateController.text,
                           });

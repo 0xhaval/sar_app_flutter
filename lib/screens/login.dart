@@ -120,9 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _usrController,
                     textInputAction: TextInputAction.next,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'اسم المستخدم أو البريد الإلكتروني',
-                      prefixIcon: Icon(Icons.person_outline),
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email_outlined),
                     ),
                   ),
                   const SizedBox(height: 16),

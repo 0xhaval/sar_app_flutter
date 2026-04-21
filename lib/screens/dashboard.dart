@@ -31,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _fullName = await AuthService.getFullName();
       _employeeId = await AuthService.getEmployeeId();
 
-      final data = await ApiService.call('get_dashboard');
+      final data = await ApiService.getJson('/api/mobile/dashboard');
       if (!mounted) return;
       setState(() {
         _leaveBalance = (data['leave_balance'] as num?)?.toInt() ?? 0;

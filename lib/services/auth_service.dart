@@ -2,34 +2,40 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
 class AuthService {
-  static Future<Map<String, dynamic>> login(String usr, String pwd) async {
-    final result = await ApiService.login(usr, pwd);
-    final data = Map<String, dynamic>.from(result);
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final data = await ApiService.login(email, password);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('api_key', data['api_key'] ?? '');
-    await prefs.setString('api_secret', data['api_secret'] ?? '');
-    await prefs.setString('user', data['user'] ?? '');
-    await prefs.setString('full_name', data['full_name'] ?? '');
-    await prefs.setString('employee_id', data['employee_id'] ?? '');
+    await prefs.setString('auth_token', data['token'] ?? '');
+
+    final user = data['user'] as Map?;
+    final employee = data['employee'] as Map?;
+    await prefs.setString('user_id', user?['id'] ?? '');
+    await prefs.setString('user_email', user?['email'] ?? '');
+    await prefs.setString('full_name', user?['name'] ?? '');
+    await prefs.setString('employee_id', employee?['employeeCode'] ?? '');
 
     return data;
   }
 
   static Future<void> logout() async {
+    try {
+      await ApiService.postJson('/api/mobile/auth/logout');
+    } catch (_) {
+      /* server-side is a no-op; ignore errors so logout always succeeds */
+    }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('api_key');
-    await prefs.remove('api_secret');
-    await prefs.remove('user');
+    await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('user_email');
     await prefs.remove('full_name');
     await prefs.remove('employee_id');
   }
 
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    final apiKey = prefs.getString('api_key') ?? '';
-    final apiSecret = prefs.getString('api_secret') ?? '';
-    return apiKey.isNotEmpty && apiSecret.isNotEmpty;
+    final token = prefs.getString('auth_token') ?? '';
+    return token.isNotEmpty;
   }
 
   static Future<String> getFullName() async {

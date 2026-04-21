@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Shows a modern animated bottom sheet with drag handle and staggered form field entrance.
+/// Shows a modern animated bottom sheet with drag handle, scrollable content,
+/// a close button, and staggered form field entrance.
 Future<T?> showAnimatedBottomSheet<T>({
   required BuildContext context,
   required List<Widget> children,
@@ -10,12 +11,22 @@ Future<T?> showAnimatedBottomSheet<T>({
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (context) {
-      return _AnimatedSheetContent(
-        title: title,
-        subtitle: subtitle,
-        children: children,
+      return DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return _AnimatedSheetContent(
+            title: title,
+            subtitle: subtitle,
+            scrollController: scrollController,
+            children: children,
+          );
+        },
       );
     },
   );
@@ -25,11 +36,13 @@ class _AnimatedSheetContent extends StatefulWidget {
   final String? title;
   final String? subtitle;
   final List<Widget> children;
+  final ScrollController scrollController;
 
   const _AnimatedSheetContent({
     this.title,
     this.subtitle,
     required this.children,
+    required this.scrollController,
   });
 
   @override
@@ -62,29 +75,21 @@ class _AnimatedSheetContentState extends State<_AnimatedSheetContent>
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              12,
-              20,
-              MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag Handle
-                Center(
-                  child: Container(
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag Handle + close button row
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
@@ -92,53 +97,78 @@ class _AnimatedSheetContentState extends State<_AnimatedSheetContent>
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Title
-                if (widget.title != null) ...[
-                  _StaggeredItem(
-                    animation: _controller,
-                    index: 0,
-                    totalItems: totalItems + 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title!,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (widget.subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.subtitle!,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF353535),
-                            ),
-                          ),
-                        ],
-                      ],
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      tooltip: 'إغلاق',
+                      icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
+                      onPressed: () => Navigator.of(context).maybePop(),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
-                // Staggered children
-                ...List.generate(totalItems, (index) {
-                  return _StaggeredItem(
-                    animation: _controller,
-                    index: index + 1,
-                    totalItems: totalItems + 1,
-                    child: widget.children[index],
-                  );
-                }),
-              ],
+              ),
             ),
-          ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                behavior: HitTestBehavior.opaque,
+                child: SingleChildScrollView(
+                  controller: widget.scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    8,
+                    20,
+                    MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.title != null) ...[
+                        _StaggeredItem(
+                          animation: _controller,
+                          index: 0,
+                          totalItems: totalItems + 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.title!,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (widget.subtitle != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.subtitle!,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF353535),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      ...List.generate(totalItems, (index) {
+                        return _StaggeredItem(
+                          animation: _controller,
+                          index: index + 1,
+                          totalItems: totalItems + 1,
+                          child: widget.children[index],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
       ),
     );
   }
