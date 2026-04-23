@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/staggered_column.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'login.dart';
+
+const String kPrivacyPolicyUrl = 'https://sar-realestate.com/privacy';
+const String kTermsOfServiceUrl = 'https://sar-realestate.com/terms';
+const String kSupportEmail = 'support@sar-realestate.com';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -58,6 +63,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الرابط')),
+      );
+    }
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final confirmController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            final canDelete = confirmController.text.trim() == 'حذف';
+            return AlertDialog(
+              title: const Text('حذف الحساب'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'سيؤدي هذا الإجراء إلى حذف حسابك وجميع بياناتك الشخصية المرتبطة به بشكل دائم. لا يمكن التراجع عن هذه العملية.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'للتأكيد، اكتب كلمة "حذف" في الحقل أدناه:',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmController,
+                    onChanged: (_) => setLocal(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'حذف',
+                      isDense: true,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('إلغاء'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                  ),
+                  onPressed: canDelete ? () => Navigator.of(ctx).pop(true) : null,
+                  child: const Text('حذف نهائي'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await AuthService.deleteAccount();
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حذف الحساب بنجاح')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل حذف الحساب: $e')),
+      );
+    }
   }
 
   @override
@@ -169,6 +265,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 16),
 
+                        // Legal & Support Card
+                        Card(
+                          elevation: 1,
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF6B7280)),
+                                title: const Text('سياسة الخصوصية', style: TextStyle(fontSize: 14)),
+                                trailing: const Icon(Icons.open_in_new, size: 16, color: Color(0xFF9CA3AF)),
+                                onTap: () => _openUrl(kPrivacyPolicyUrl),
+                              ),
+                              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                              ListTile(
+                                leading: const Icon(Icons.description_outlined, color: Color(0xFF6B7280)),
+                                title: const Text('شروط الاستخدام', style: TextStyle(fontSize: 14)),
+                                trailing: const Icon(Icons.open_in_new, size: 16, color: Color(0xFF9CA3AF)),
+                                onTap: () => _openUrl(kTermsOfServiceUrl),
+                              ),
+                              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                              ListTile(
+                                leading: const Icon(Icons.support_agent_outlined, color: Color(0xFF6B7280)),
+                                title: const Text('التواصل مع الدعم', style: TextStyle(fontSize: 14)),
+                                trailing: const Icon(Icons.open_in_new, size: 16, color: Color(0xFF9CA3AF)),
+                                onTap: () => _openUrl('mailto:$kSupportEmail'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
                         // Logout Button
                         SizedBox(
                           width: double.infinity,
@@ -183,6 +309,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Delete Account Button (App Store Guideline 5.1.1(v))
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: TextButton.icon(
+                            onPressed: _handleDeleteAccount,
+                            icon: const Icon(Icons.delete_forever_outlined, size: 18),
+                            label: const Text('حذف الحساب'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFFDC2626),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'حذف الحساب عملية دائمة ولا يمكن التراجع عنها',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                         ),
                         const SizedBox(height: 24),
                       ],

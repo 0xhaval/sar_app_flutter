@@ -18,6 +18,16 @@ class AuthService {
     return data;
   }
 
+  static Future<void> deleteAccount() async {
+    await ApiService.deleteJson('/api/mobile/me');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('user_email');
+    await prefs.remove('full_name');
+    await prefs.remove('employee_id');
+  }
+
   static Future<void> logout() async {
     try {
       await ApiService.postJson('/api/mobile/auth/logout');
