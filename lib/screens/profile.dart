@@ -5,8 +5,8 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'login.dart';
 
-const String kPrivacyPolicyUrl = 'https://sar-realestate.com/privacy';
-const String kTermsOfServiceUrl = 'https://sar-realestate.com/terms';
+const String kPrivacyPolicyUrl = 'https://sar-iq.com/privacy';
+const String kTermsOfServiceUrl = 'https://sar-iq.com/terms';
 const String kSupportEmail = 'support@sar-realestate.com';
 
 class ProfileScreen extends StatefulWidget {
