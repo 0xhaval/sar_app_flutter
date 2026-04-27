@@ -5,12 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Base URL for the Next.js backend (real-estate-app).
-  // Override at build time:
-  //   flutter run --dart-define=API_BASE_URL=https://your-host
-  // Default: Android emulator → host machine.
+  // Default targets production. Override at build time for local dev:
+  //   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'https://sar-iq.com',
   );
 
   static Future<Map<String, String>> _getHeaders({bool json = true}) async {

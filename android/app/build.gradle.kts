@@ -8,7 +8,9 @@ plugins {
 android {
     namespace = "com.sar.sar_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // ndkVersion intentionally unset: this project has no native plugins,
+    // so we skip the NDK install. Re-add `ndkVersion = flutter.ndkVersion`
+    // if you add a plugin that ships C/C++ code.
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

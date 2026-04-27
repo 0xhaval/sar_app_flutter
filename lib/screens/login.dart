@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   Future<void> _handleLogin() async {
-    final usr = _usrController.text.trim();
+    final usr = _usrController.text.trim().toLowerCase();
     final pwd = _pwdController.text;
 
     if (usr.isEmpty || pwd.isEmpty) {
@@ -121,6 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _usrController,
                     textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textCapitalization: TextCapitalization.none,
                     decoration: const InputDecoration(
                       labelText: 'البريد الإلكتروني',
                       prefixIcon: Icon(Icons.email_outlined),

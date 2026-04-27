@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../widgets/calendar_view.dart';
 import '../widgets/animated_bottom_sheet.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -17,7 +18,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   String? _checkInTime;
   late TabController _tabController;
   bool _loading = true;
+  bool _submitting = false;
   List<AttendanceRecord> _attendanceData = [];
+  List<CheckInRequest> _pendingRequests = [];
 
   @override
   void initState() {
@@ -39,10 +42,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
         ApiService.getJson('/api/mobile/attendance',
             query: {'month': now.month, 'year': now.year}),
         ApiService.getJson('/api/mobile/attendance/today'),
+        ApiService.getJson('/api/mobile/attendance/checkin-requests')
+            .catchError((_) => <String, dynamic>{'requests': []}),
       ]);
 
       final attendanceList = List<Map<String, dynamic>>.from(results[0] ?? []);
       final todayCheckins = List<Map<String, dynamic>>.from(results[1] ?? []);
+      final requestsData = results[2] is Map
+          ? Map<String, dynamic>.from(results[2] as Map)
+          : <String, dynamic>{};
+      final requestsList = List<Map<String, dynamic>>.from(
+          requestsData['requests'] ?? const []);
 
       // Determine check-in state from today's checkins
       bool isCheckedIn = false;
@@ -66,6 +76,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
             status: status,
           );
         }).toList();
+        _pendingRequests =
+            requestsList.map(CheckInRequest.fromJson).toList();
         _checkedIn = isCheckedIn;
         _checkInTime = lastCheckInTime;
         _loading = false;
@@ -94,34 +106,56 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     }
   }
 
-  Future<void> _handleCheckIn() async {
-    try {
-      final result = await ApiService.postJson('/api/mobile/attendance/checkin');
-      final time = _formatTime(result['time'] ?? '');
-      setState(() {
-        _checkedIn = true;
-        _checkInTime = time;
-      });
-      Fluttertoast.showToast(msg: 'تم تسجيل الحضور في $time');
-    } catch (e) {
-      final msg = e.toString().contains('DoesNotExist')
-          ? 'لا يوجد سجل موظف مرتبط بحسابك'
-          : 'خطأ: $e';
-      Fluttertoast.showToast(msg: msg);
-    }
-  }
+  Future<void> _handleCheckIn({String? requestId}) => _submitAttendance(
+        endpoint: '/api/mobile/attendance/checkin',
+        successPrefix: 'تم تسجيل الحضور في',
+        requestId: requestId,
+        onSuccess: (time) {
+          _checkedIn = true;
+          _checkInTime = time;
+          if (requestId != null) {
+            _pendingRequests = _pendingRequests
+                .where((r) => r.id != requestId)
+                .toList();
+          }
+        },
+      );
 
-  Future<void> _handleCheckOut() async {
+  Future<void> _handleCheckOut() => _submitAttendance(
+        endpoint: '/api/mobile/attendance/checkout',
+        successPrefix: 'تم تسجيل الانصراف في',
+        onSuccess: (_) => _checkedIn = false,
+      );
+
+  Future<void> _submitAttendance({
+    required String endpoint,
+    required String successPrefix,
+    required void Function(String time) onSuccess,
+    String? requestId,
+  }) async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    Fluttertoast.showToast(msg: 'جاري تحديد الموقع...');
     try {
-      final result = await ApiService.postJson('/api/mobile/attendance/checkout');
+      final position = await LocationService.getCurrentPosition();
+      final result = await ApiService.postJson(endpoint, body: {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'requestId': ?requestId,
+      });
       final time = _formatTime(result['time'] ?? '');
-      setState(() => _checkedIn = false);
-      Fluttertoast.showToast(msg: 'تم تسجيل الانصراف في $time');
+      if (!mounted) return;
+      setState(() => onSuccess(time));
+      Fluttertoast.showToast(msg: '$successPrefix $time');
+    } on LocationException catch (e) {
+      Fluttertoast.showToast(msg: e.message);
     } catch (e) {
       final msg = e.toString().contains('DoesNotExist')
           ? 'لا يوجد سجل موظف مرتبط بحسابك'
           : 'خطأ: $e';
       Fluttertoast.showToast(msg: msg);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -281,15 +315,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                                 child: _checkedIn
                                     ? ElevatedButton(
                                         key: const ValueKey('checkout'),
-                                        onPressed: _handleCheckOut,
+                                        onPressed: _submitting ? null : _handleCheckOut,
                                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), minimumSize: const Size(double.infinity, 96)),
-                                        child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.logout, size: 32), SizedBox(height: 8), Text('تسجيل الانصراف')]),
+                                        child: _submitting
+                                            ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                                            : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.logout, size: 32), SizedBox(height: 8), Text('تسجيل الانصراف')]),
                                       )
                                     : ElevatedButton(
                                         key: const ValueKey('checkin'),
-                                        onPressed: _handleCheckIn,
+                                        onPressed: _submitting ? null : _handleCheckIn,
                                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), minimumSize: const Size(double.infinity, 96)),
-                                        child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.login, size: 32), SizedBox(height: 8), Text('تسجيل الحضور')]),
+                                        child: _submitting
+                                            ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                                            : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.login, size: 32), SizedBox(height: 8), Text('تسجيل الحضور')]),
                                       ),
                               ),
                             ),
@@ -319,6 +357,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
               ],
             ),
           ),
+
+          // Pending check-in requests (admin-initiated)
+          if (!_loading && !_checkedIn && _pendingRequests.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                children: _pendingRequests
+                    .map((r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildRequestBanner(r),
+                        ))
+                    .toList(),
+              ),
+            ),
 
           // Tabs
           Padding(
@@ -356,6 +408,98 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
         ],
       ),
     );
+  }
+
+  Widget _buildRequestBanner(CheckInRequest req) {
+    final requesterLine = req.requestedBy != null && req.requestedBy!.isNotEmpty
+        ? 'طلب من: ${req.requestedBy}'
+        : 'طلب تسجيل حضور من الإدارة';
+    final timeLabel = _formatRequestedAt(req.requestedAt);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        border: Border.all(color: const Color(0xFFFB923C)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFFB923C).withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Color(0xFFFB923C), shape: BoxShape.circle),
+                child: const Icon(Icons.notifications_active, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'تنبيه: مطلوب تسجيل الحضور',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF9A3412)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      requesterLine,
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF7C2D12)),
+                    ),
+                    if (timeLabel != null) ...[
+                      const SizedBox(height: 2),
+                      Text(timeLabel, style: const TextStyle(fontSize: 12, color: Color(0xFF9A3412))),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (req.note != null && req.note!.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(req.note!, style: const TextStyle(fontSize: 13, color: Color(0xFF7C2D12))),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: _submitting ? null : () => _handleCheckIn(requestId: req.id),
+              icon: const Icon(Icons.check_circle, size: 20),
+              label: const Text('تأكيد تسجيل الحضور الآن', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEA580C),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _formatRequestedAt(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return 'الوقت: ${DateFormat('hh:mm a · d MMM', 'ar').format(dt)}';
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildHistoryTab() {
@@ -406,4 +550,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
       },
     );
   }
+}
+
+class CheckInRequest {
+  final String id;
+  final String? note;
+  final String? requestedBy;
+  final String? requestedAt;
+
+  const CheckInRequest({
+    required this.id,
+    this.note,
+    this.requestedBy,
+    this.requestedAt,
+  });
+
+  factory CheckInRequest.fromJson(Map<String, dynamic> json) => CheckInRequest(
+        id: json['id'] as String,
+        note: json['note'] as String?,
+        requestedBy: json['requestedBy'] as String?,
+        requestedAt: json['requestedAt'] as String?,
+      );
 }

@@ -76,6 +76,8 @@
 		<string>يحتاج التطبيق لحفظ الصور في مكتبة الصور.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>يحتاج التطبيق للميكروفون عند تسجيل الفيديو.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>يحتاج التطبيق إلى موقعك لتسجيل الحضور والانصراف.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<key>LSApplicationQueriesSchemes</key>
