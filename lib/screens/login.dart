@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../app_shell.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -21,7 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final pwd = _pwdController.text;
 
     if (usr.isEmpty || pwd.isEmpty) {
-      setState(() => _error = 'يرجى إدخال اسم المستخدم وكلمة المرور');
+      setState(() => _error =
+          'يرجى إدخال اسم المستخدم وكلمة المرور\nPlease enter your email and password');
       return;
     }
 
@@ -36,11 +40,36 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AppShell()),
       );
+    } on ApiException catch (e) {
+      setState(() => _error = _formatApiError(e));
+    } on SocketException catch (_) {
+      setState(() => _error =
+          'تعذر الاتصال بالخادم، تحقق من اتصال الإنترنت\n'
+          'Cannot reach server: ${ApiService.baseUrl}');
+    } on TimeoutException catch (_) {
+      setState(() => _error =
+          'انتهت مهلة الاتصال، يرجى المحاولة مجدداً\nRequest timed out');
+    } on HttpException catch (e) {
+      setState(() => _error =
+          'خطأ في الشبكة\nNetwork error: ${e.message}');
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error =
+          'خطأ غير متوقع\nUnexpected error: $e\n(${ApiService.baseUrl})');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String _formatApiError(ApiException e) {
+    if (e.statusCode == 401 || e.statusCode == 403) {
+      return 'البريد الإلكتروني أو كلمة المرور غير صحيحة\n'
+          'Wrong email or password';
+    }
+    if (e.statusCode >= 500) {
+      return 'خطأ في الخادم، يرجى المحاولة لاحقاً\n'
+          'Server error (${e.statusCode}): ${e.message}';
+    }
+    return '${e.message}\n(HTTP ${e.statusCode})';
   }
 
   @override
