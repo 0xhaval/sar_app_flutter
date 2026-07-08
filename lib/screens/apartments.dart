@@ -213,7 +213,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     String? selectedBlockId;
     String? selectedApartmentType;
     String selectedStatus = 'Vacant';
-    String? selectedOccupancyType;
+    String? selectedOfferingType;
     String? selectedFurnishing;
     String? selectedViewType;
     String? selectedCondition;
@@ -242,34 +242,34 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     List<File> selectedImages = [];
 
     // --- Options ---
-    final apartmentTypes = ['Studio', '1BR', '2BR', '3BR', '4BR', 'Penthouse', 'Duplex', 'Villa', 'Furnished Apartment', 'Chalet', 'Land', 'Building', 'Commercial', 'Administrative', 'Medical', 'Other'];
-    final statusOptions = ['Vacant', 'Occupied', 'Under Maintenance', 'Reserved', 'Sold'];
-    final occupancyOptions = ['Rent', 'Sale', 'Both'];
+    // Option values below mirror the backend's canonical vocabulary in
+    // real-estate-app/src/lib/field-options.ts (SEED_OPTIONS). Keep in lockstep.
+    final apartmentTypes = ['Studio', 'Apartment', 'Duplex', 'Penthouse', 'Loft', 'Townhouse', 'Villa'];
+    final statusOptions = ['Vacant', 'Occupied', 'Reserved', 'Under Maintenance', 'Not Available'];
+    final offeringOptions = ['Rent', 'Sale'];
     final furnishingOptions = ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
-    final viewOptions = ['Main Street', 'Side Street', 'Corner', 'Back', 'Garden', 'Pool', 'Sea', 'City', 'Internal', 'Nile', 'Golf', 'Plaza', 'Club', 'Lake', 'Other'];
-    final conditionOptions = ['New', 'Excellent', 'Good', 'Needs Renovation'];
-    final buildingStatusOptions = ['Completed', 'Under Construction', 'Off-Plan'];
-    final paymentMethodOptions = ['Cash', 'Installments'];
+    final viewOptions = ['City', 'Garden', 'Pool', 'Sea', 'Mountain', 'Street', 'Park'];
+    final conditionOptions = ['Excellent', 'Good', 'Fair', 'Needs Repair', 'Under Renovation'];
+    final buildingStatusOptions = ['Under Construction', 'Ready to move in'];
+    final paymentMethodOptions = ['Cash', 'Both'];
     final frequencyOptions = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'];
 
     final statusLabels = {
       'Vacant': 'شاغرة',
       'Occupied': 'مشغولة',
-      'Under Maintenance': 'تحت الصيانة',
       'Reserved': 'محجوزة',
-      'Sold': 'مباعة',
+      'Under Maintenance': 'تحت الصيانة',
+      'Not Available': 'غير متاحة',
     };
-    final occupancyLabels = {'Rent': 'إيجار', 'Sale': 'بيع', 'Both': 'كلاهما'};
+    final offeringLabels = {'Rent': 'إيجار', 'Sale': 'بيع'};
     final furnishingLabels = {'Unfurnished': 'بدون أثاث', 'Semi-Furnished': 'مفروشة جزئياً', 'Fully Furnished': 'مفروشة بالكامل'};
     final viewLabels = {
-      'Main Street': 'شارع رئيسي', 'Side Street': 'شارع جانبي', 'Corner': 'ناصية',
-      'Back': 'خلفي', 'Garden': 'حديقة', 'Pool': 'مسبح', 'Sea': 'بحر',
-      'City': 'مدينة', 'Internal': 'داخلي', 'Nile': 'نيل', 'Golf': 'غولف',
-      'Plaza': 'ساحة', 'Club': 'نادي', 'Lake': 'بحيرة', 'Other': 'أخرى',
+      'City': 'مدينة', 'Garden': 'حديقة', 'Pool': 'مسبح', 'Sea': 'بحر',
+      'Mountain': 'جبل', 'Street': 'شارع', 'Park': 'حديقة عامة',
     };
-    final conditionLabels = {'New': 'جديدة', 'Excellent': 'ممتازة', 'Good': 'جيدة', 'Needs Renovation': 'تحتاج تجديد'};
-    final buildingStatusLabels = {'Completed': 'مكتمل', 'Under Construction': 'قيد الإنشاء', 'Off-Plan': 'على الخرائط'};
-    final paymentMethodLabels = {'Cash': 'نقدي', 'Installments': 'أقساط'};
+    final conditionLabels = {'Excellent': 'ممتازة', 'Good': 'جيدة', 'Fair': 'مقبولة', 'Needs Repair': 'تحتاج إصلاح', 'Under Renovation': 'قيد التجديد'};
+    final buildingStatusLabels = {'Under Construction': 'قيد الإنشاء', 'Ready to move in': 'جاهزة للسكن'};
+    final paymentMethodLabels = {'Cash': 'نقدي', 'Both': 'كلاهما'};
     final frequencyLabels = {'Monthly': 'شهري', 'Quarterly': 'ربع سنوي', 'Semi-Annual': 'نصف سنوي', 'Annual': 'سنوي'};
 
     Future<void> pickDate(TextEditingController c) async {
@@ -487,10 +487,10 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                       const Text('نوع العرض', style: TextStyle(fontWeight: FontWeight.w500)),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: selectedOccupancyType,
+                        value: selectedOfferingType,
                         isExpanded: true, hint: const Text('اختر'),
-                        items: occupancyOptions.map((o) => DropdownMenuItem(value: o, child: Text(occupancyLabels[o] ?? o))).toList(),
-                        onChanged: (v) => setSheetState(() => selectedOccupancyType = v),
+                        items: offeringOptions.map((o) => DropdownMenuItem(value: o, child: Text(offeringLabels[o] ?? o))).toList(),
+                        onChanged: (v) => setSheetState(() => selectedOfferingType = v),
                       ),
                     ]),
                   ),
@@ -540,11 +540,11 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                     ]),
                   ),
                 ]),
-                if (selectedPaymentMethod == 'Cash') ...[
+                if (selectedPaymentMethod == 'Cash' || selectedPaymentMethod == 'Both') ...[
                   const SizedBox(height: 12),
                   _buildField('السعر النقدي', cashPriceController, '500000', isNumber: true),
                 ],
-                if (selectedPaymentMethod == 'Installments') ...[
+                if (selectedPaymentMethod == 'Both') ...[
                   const SizedBox(height: 12),
                   Row(children: [
                     Expanded(child: _buildField('الدفعة الأولى', downPaymentController, '100000', isNumber: true)),
@@ -667,7 +667,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                           'hasElectricityMeter': hasElectricityMeter,
                           'hasNaturalGasMeter': hasNaturalGasMeter,
                           'status': selectedStatus,
-                          'occupancyType': selectedOccupancyType,
+                          'offeringType': selectedOfferingType,
                           'monthlyRent': numOrNull(rentController.text),
                           'monthlyMaintenanceFee': numOrNull(monthlyMaintenanceFeeController.text),
                           'securityDeposit': numOrNull(securityDepositController.text),
@@ -681,7 +681,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                           'cashPrice': numOrNull(cashPriceController.text),
                           'downPayment': numOrNull(downPaymentController.text),
                           'monthlyInstallment': numOrNull(monthlyInstallmentController.text),
-                          'installmentFrequency': selectedPaymentMethod == 'Installments' ? selectedInstallmentFrequency : null,
+                          'installmentFrequency': selectedPaymentMethod == 'Both' ? selectedInstallmentFrequency : null,
                           'installmentYears': numOrNull(installmentYearsController.text),
                           'totalInstallmentPrice': numOrNull(totalInstallmentPriceController.text),
                           'notes': notesController.text.isEmpty ? null : notesController.text,
