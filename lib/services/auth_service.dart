@@ -68,12 +68,12 @@ class AuthService {
   /// once, persists, and returns. Returns an empty list on any failure.
   static Future<List<String>> getRoles() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('user_roles');
-    if (stored != null && stored.isNotEmpty) {
-      final decoded = jsonDecode(stored);
-      if (decoded is List) return decoded.map((r) => r.toString()).toList();
-    }
     try {
+      final stored = prefs.getString('user_roles');
+      if (stored != null && stored.isNotEmpty) {
+        final decoded = jsonDecode(stored);
+        if (decoded is List) return decoded.map((r) => r.toString()).toList();
+      }
       final data = await ApiService.getJson('/api/mobile/me');
       final user = (data is Map ? data['user'] as Map? : null);
       final roles = extractRoles(user);

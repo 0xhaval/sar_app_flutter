@@ -26,4 +26,9 @@ void main() {
     });
     expect(await AuthService.canAddCustomer(), isFalse);
   });
+
+  test('getRoles returns an empty list for a corrupted stored value', () async {
+    SharedPreferences.setMockInitialValues({'user_roles': 'not-json'});
+    expect(await AuthService.getRoles(), isEmpty);
+  });
 }
