@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'roles.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -14,6 +16,7 @@ class AuthService {
     await prefs.setString('user_email', user?['email'] ?? '');
     await prefs.setString('full_name', user?['name'] ?? '');
     await prefs.setString('employee_id', employee?['employeeCode'] ?? '');
+    await prefs.setString('user_roles', jsonEncode(extractRoles(user)));
 
     return data;
   }
@@ -26,6 +29,7 @@ class AuthService {
     await prefs.remove('user_email');
     await prefs.remove('full_name');
     await prefs.remove('employee_id');
+    await prefs.remove('user_roles');
   }
 
   static Future<void> logout() async {
@@ -40,6 +44,7 @@ class AuthService {
     await prefs.remove('user_email');
     await prefs.remove('full_name');
     await prefs.remove('employee_id');
+    await prefs.remove('user_roles');
   }
 
   static Future<bool> isLoggedIn() async {
@@ -56,5 +61,31 @@ class AuthService {
   static Future<String> getEmployeeId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('employee_id') ?? '';
+  }
+
+  /// Roles for the current user. Reads the persisted list first; if none was
+  /// stored (a session that predates role persistence), fetches `/api/mobile/me`
+  /// once, persists, and returns. Returns an empty list on any failure.
+  static Future<List<String>> getRoles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString('user_roles');
+    if (stored != null && stored.isNotEmpty) {
+      final decoded = jsonDecode(stored);
+      if (decoded is List) return decoded.map((r) => r.toString()).toList();
+    }
+    try {
+      final data = await ApiService.getJson('/api/mobile/me');
+      final user = (data is Map ? data['user'] as Map? : null);
+      final roles = extractRoles(user);
+      await prefs.setString('user_roles', jsonEncode(roles));
+      return roles;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Whether the current user may create customers (Reception / Sales Mobile).
+  static Future<bool> canAddCustomer() async {
+    return canAddCustomerFromRoles(await getRoles());
   }
 }
