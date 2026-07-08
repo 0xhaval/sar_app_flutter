@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:fluttertoast/fluttertoast.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -15,11 +16,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
   String? _error;
   List<Map<String, dynamic>> _customers = [];
   String _search = '';
+  bool _canAddCustomer = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final canAdd = await AuthService.canAddCustomer();
+    if (mounted) setState(() => _canAddCustomer = canAdd);
   }
 
   Future<void> _loadData() async {
@@ -113,33 +121,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           ),
                         ),
                       ),
-                      Material(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        child: InkWell(
+                      if (_canAddCustomer)
+                        Material(
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(10),
-                          onTap: _openAddCustomer,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add, color: Colors.white, size: 18),
-                                SizedBox(width: 4),
-                                Text(
-                                  'إضافة عميل',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: _openAddCustomer,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add, color: Colors.white, size: 18),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'إضافة عميل',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
