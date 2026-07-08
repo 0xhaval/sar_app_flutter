@@ -85,6 +85,8 @@ class AuthService {
   }
 
   /// Whether the current user may create customers (Reception / Sales Mobile).
+  // Role list is cached in prefs and not refreshed mid-session; the server
+  // stays authoritative (create still 403s if a role was revoked).
   static Future<bool> canAddCustomer() async {
     return canAddCustomerFromRoles(await getRoles());
   }

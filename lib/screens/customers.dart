@@ -840,6 +840,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     setState(() => _saving = true);
 
     final budgetText = _budgetController.text.trim();
+    final budget = num.tryParse(budgetText);
     final body = <String, dynamic>{
       'customerName': _nameController.text.trim(),
       if (_phoneController.text.trim().isNotEmpty)
@@ -847,7 +848,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       if (_emailController.text.trim().isNotEmpty)
         'email': _emailController.text.trim(),
       if (_customerType != null) 'customerType': _customerType,
-      if (budgetText.isNotEmpty) 'budget': num.tryParse(budgetText),
+      'budget': ?budget,
     };
 
     try {

@@ -16,6 +16,9 @@ void main() {
     test('returns empty for null', () {
       expect(extractRoles(null), isEmpty);
     });
+    test('stringifies non-string entries in the roles list', () {
+      expect(extractRoles({'roles': [1, null]}), ['1', 'null']);
+    });
   });
 
   group('canAddCustomerFromRoles', () {
