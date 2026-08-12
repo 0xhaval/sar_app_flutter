@@ -1,7 +1,8 @@
-/// Role identifiers (as the backend sends them) allowed to create customers.
-/// Compared case-insensitively; add entries here to grant the button to more
-/// roles.
-const Set<String> kAddCustomerRoles = {'RECEPTION', 'SALES_MOBILE'};
+/// Role identifiers (as the backend sends them) allowed to create customers
+/// from mobile. Reception is the intake role; Sales Mobile is read-only for
+/// customers (backend RBAC), so it is intentionally excluded. Compared
+/// case-insensitively.
+const Set<String> kAddCustomerRoles = {'RECEPTION'};
 
 /// Coerces the `user` object from a login or `/api/mobile/me` response into a
 /// list of role strings. Prefers `user['roles']` (a list); falls back to the

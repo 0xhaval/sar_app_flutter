@@ -25,11 +25,14 @@ void main() {
     test('true for RECEPTION', () {
       expect(canAddCustomerFromRoles(['RECEPTION']), isTrue);
     });
-    test('true when SALES_MOBILE is among several roles', () {
-      expect(canAddCustomerFromRoles(['ADMIN', 'SALES_MOBILE']), isTrue);
+    test('true when RECEPTION is among several roles', () {
+      expect(canAddCustomerFromRoles(['ADMIN', 'RECEPTION']), isTrue);
     });
     test('is case-insensitive', () {
-      expect(canAddCustomerFromRoles(['sales_mobile']), isTrue);
+      expect(canAddCustomerFromRoles(['reception']), isTrue);
+    });
+    test('false for SALES_MOBILE (read-only for customers)', () {
+      expect(canAddCustomerFromRoles(['SALES_MOBILE']), isFalse);
     });
     test('false for unrelated roles', () {
       expect(canAddCustomerFromRoles(['ADMIN', 'HR']), isFalse);
