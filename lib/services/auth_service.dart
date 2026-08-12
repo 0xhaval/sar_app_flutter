@@ -72,7 +72,10 @@ class AuthService {
       final stored = prefs.getString('user_roles');
       if (stored != null && stored.isNotEmpty) {
         final decoded = jsonDecode(stored);
-        if (decoded is List) return decoded.map((r) => r.toString()).toList();
+        // An empty list is a stale/pre-roles cache: fall through to /me.
+        if (decoded is List && decoded.isNotEmpty) {
+          return decoded.map((r) => r.toString()).toList();
+        }
       }
       final data = await ApiService.getJson('/api/mobile/me');
       final user = (data is Map ? data['user'] as Map? : null);
