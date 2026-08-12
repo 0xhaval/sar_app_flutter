@@ -4,6 +4,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
+/// Fixed customer-status vocabulary Sales Mobile can set. MUST stay identical
+/// to CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
+const List<String> kCustomerStatuses = ['مهتم', 'غير مهتم', 'متابعة'];
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -404,12 +408,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _customer;
+  List<String> _roles = const [];
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadRoles();
   }
+
+  Future<void> _loadRoles() async {
+    final roles = await AuthService.getRoles();
+    if (mounted) setState(() => _roles = roles);
+  }
+
+  bool get _canChangeStatus =>
+      _roles.map((r) => r.toUpperCase()).contains('SALES_MOBILE');
 
   Future<void> _load() async {
     setState(() {
@@ -428,6 +442,48 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _changeStatus() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'تغيير الحالة',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+              for (final s in kCustomerStatuses)
+                ListTile(
+                  title: Text(s),
+                  onTap: () => Navigator.of(ctx).pop(s),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null) return;
+    try {
+      await ApiService.postJson(
+        '/api/mobile/customers/${widget.customerId}/status',
+        body: {'status': selected},
+      );
+      if (!mounted) return;
+      Fluttertoast.showToast(msg: 'تم تحديث الحالة');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      Fluttertoast.showToast(msg: 'فشل تحديث الحالة: $e');
     }
   }
 
@@ -572,13 +628,31 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               );
             }).toList(),
           ),
+        if (_canChangeStatus)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: _changeStatus,
+                icon: const Icon(Icons.flag),
+                label: const Text('تغيير الحالة'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF284A63),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
         if (logs.isNotEmpty)
           _section(
             'سجل الحالات',
             logs.map((l) {
               final status = (l['status'] ?? '').toString();
               final note = (l['notes'] ?? '').toString();
-              final when = _formatDate(l['createdAt']?.toString() ?? '');
+              final when =
+                  _formatDate((l['datetime'] ?? l['createdAt'])?.toString() ?? '');
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Column(
