@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(flutter pub:*)",
+      "Read(//home/frappe/**)",
+      "Bash(/home/frappe/.flutter-sdk/bin/flutter pub:*)",
+      "Bash(/home/frappe/.flutter-sdk/bin/flutter analyze:*)",
+      "Bash(ls:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(find /home/frappe/Flutter/sar_app/android/app/src/main/res/mipmap-* -type f)",
+      "Bash(file /home/frappe/Flutter/sar_app/web/icons/*)",
+      "Bash(file /home/frappe/Flutter/sar_app/android/app/src/main/res/mipmap-*/*)",
+      "Bash(flutter build:*)",
+      "Bash(/home/frappe/.flutter-sdk/bin/flutter build:*)",
+      "Read(//usr/local/flutter/bin/**)",
+      "Read(//home/**)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth:*)",
+      "Bash(ssh-keygen -t ed25519 -C \"omarmuhammed.iq@gmail.com\" -f ~/.ssh/id_ed25519 -N \"\")",
+      "Bash(git remote:*)"
+    ]
+  }
+}
