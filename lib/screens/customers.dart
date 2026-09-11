@@ -4,9 +4,134 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
-/// Fixed customer-status vocabulary Sales Mobile can set. MUST stay identical
-/// to CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
-const List<String> kCustomerStatuses = ['مهتم', 'غير مهتم', 'متابعة'];
+/// Fixed customer-status vocabulary. MUST stay identical to
+/// CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
+const List<String> kCustomerStatuses = ['مهتم', 'غير مهتم', 'قام بالشراء'];
+
+Color _statusColor(String status) {
+  switch (status) {
+    case 'مهتم':
+      return const Color(0xFF16A34A);
+    case 'غير مهتم':
+      return const Color(0xFFDC2626);
+    case 'قام بالشراء':
+      return const Color(0xFF2563EB);
+    default:
+      return const Color(0xFF6B7280);
+  }
+}
+
+/// Bottom sheet: pick one of [kCustomerStatuses] + optional note.
+/// Resolves to `{'status': ..., 'description': ...}` or null when dismissed.
+Future<Map<String, String>?> _showStatusSheet(
+  BuildContext context, {
+  String? current,
+}) {
+  final noteController = TextEditingController();
+  String? selected = kCustomerStatuses.contains(current) ? current : null;
+  return showModalBottomSheet<Map<String, String>>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheetState) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                      'تغيير الحالة',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final s in kCustomerStatuses)
+                    ListTile(
+                      title: Text(s),
+                      leading: Icon(
+                        selected == s
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: selected == s
+                            ? _statusColor(s)
+                            : const Color(0xFF9CA3AF),
+                      ),
+                      onTap: () => setSheetState(() => selected = s),
+                    ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      labelText: 'ملاحظة (اختياري)',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: selected == null
+                          ? null
+                          : () => Navigator.of(ctx).pop({
+                                'status': selected!,
+                                'description': noteController.text.trim(),
+                              }),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF284A63),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('حفظ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Opens the change-status sheet for [customerId] and saves the choice.
+/// Returns true when the status was updated (caller should refresh).
+Future<bool> changeCustomerStatus(
+  BuildContext context,
+  String customerId, {
+  String? current,
+}) async {
+  final result = await _showStatusSheet(context, current: current);
+  if (result == null) return false;
+  try {
+    await ApiService.postJson(
+      '/api/mobile/customers/$customerId/status',
+      body: {
+        'status': result['status'],
+        if ((result['description'] ?? '').isNotEmpty)
+          'description': result['description'],
+      },
+    );
+    Fluttertoast.showToast(msg: 'تم تحديث الحالة');
+    return true;
+  } catch (e) {
+    Fluttertoast.showToast(msg: 'فشل تحديث الحالة: $e');
+    return false;
+  }
+}
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -223,6 +348,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final phone = (customer['phone'] ?? '').toString();
     final email = (customer['email'] ?? '').toString();
     final type = _typeLabel(customer['customerType'] as String?);
+    final status = (customer['status'] ?? '').toString();
     final counts = (customer['_count'] as Map?) ?? const {};
     final ownedCount = (counts['ownedApartments'] as num?)?.toInt() ?? 0;
     final tenantCount = (counts['tenantApartments'] as num?)?.toInt() ?? 0;
@@ -340,6 +466,46 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ),
               ],
             ],
+            const SizedBox(height: 12),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () async {
+                final updated = await changeCustomerStatus(
+                  context,
+                  customer['id']?.toString() ?? '',
+                  current: status.isEmpty ? null : status,
+                );
+                if (updated) _loadData();
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _statusColor(status).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _statusColor(status).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.flag, size: 14, color: _statusColor(status)),
+                    const SizedBox(width: 6),
+                    Text(
+                      status.isEmpty ? 'تحديد الحالة' : status,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _statusColor(status),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.edit, size: 12, color: _statusColor(status)),
+                  ],
+                ),
+              ),
+            ),
             if (ownedCount > 0 || tenantCount > 0) ...[
               const SizedBox(height: 12),
               Row(
@@ -408,22 +574,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _customer;
-  List<String> _roles = const [];
 
   @override
   void initState() {
     super.initState();
     _load();
-    _loadRoles();
   }
-
-  Future<void> _loadRoles() async {
-    final roles = await AuthService.getRoles();
-    if (mounted) setState(() => _roles = roles);
-  }
-
-  bool get _canChangeStatus =>
-      _roles.map((r) => r.toUpperCase()).contains('SALES_MOBILE');
 
   Future<void> _load() async {
     setState(() {
@@ -446,45 +602,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   }
 
   Future<void> _changeStatus() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'تغيير الحالة',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-              ),
-              for (final s in kCustomerStatuses)
-                ListTile(
-                  title: Text(s),
-                  onTap: () => Navigator.of(ctx).pop(s),
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
+    final updated = await changeCustomerStatus(
+      context,
+      widget.customerId,
+      current: (_customer?['status'] ?? '').toString(),
     );
-    if (selected == null) return;
-    try {
-      await ApiService.postJson(
-        '/api/mobile/customers/${widget.customerId}/status',
-        body: {'status': selected},
-      );
-      if (!mounted) return;
-      Fluttertoast.showToast(msg: 'تم تحديث الحالة');
-      _load();
-    } catch (e) {
-      if (!mounted) return;
-      Fluttertoast.showToast(msg: 'فشل تحديث الحالة: $e');
-    }
+    if (updated && mounted) _load();
   }
 
   @override
@@ -522,6 +645,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final type = (c['customerType'] ?? '').toString();
     final source = (c['source'] ?? '').toString();
     final subType = (c['type'] ?? '').toString();
+    final currentStatus = (c['status'] ?? '').toString();
     final budget = (c['budget'] as num?)?.toDouble();
     final createdAt = c['createdAt']?.toString();
     final favs = List<Map<String, dynamic>>.from(c['favouriteAddresses'] ?? []);
@@ -573,6 +697,32 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 Text(
                   type,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+              if (currentStatus.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.flag, size: 14, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        currentStatus,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -628,29 +778,28 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               );
             }).toList(),
           ),
-        if (_canChangeStatus)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _changeStatus,
-                icon: const Icon(Icons.flag),
-                label: const Text('تغيير الحالة'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF284A63),
-                  foregroundColor: Colors.white,
-                ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _changeStatus,
+              icon: const Icon(Icons.flag),
+              label: const Text('تغيير الحالة'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF284A63),
+                foregroundColor: Colors.white,
               ),
             ),
           ),
+        ),
         if (logs.isNotEmpty)
           _section(
             'سجل الحالات',
             logs.map((l) {
               final status = (l['status'] ?? '').toString();
-              final note = (l['notes'] ?? '').toString();
+              final note = (l['description'] ?? '').toString();
               final when =
                   _formatDate((l['datetime'] ?? l['createdAt'])?.toString() ?? '');
               return Padding(
