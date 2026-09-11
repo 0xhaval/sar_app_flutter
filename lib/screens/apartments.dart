@@ -203,9 +203,15 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     final monthlyInstallmentController = TextEditingController();
     final installmentYearsController = TextEditingController();
     final totalInstallmentPriceController = TextEditingController();
+    final handoverPaymentController = TextEditingController();
+    final quarterlyInstallmentController = TextEditingController();
+    final semiAnnualInstallmentController = TextEditingController();
+    final annualInstallmentController = TextEditingController();
     final leaseStartController = TextEditingController();
     final leaseEndController = TextEditingController();
     final moveInController = TextEditingController();
+    final constructionEndController = TextEditingController();
+    final lastInspectionController = TextEditingController();
     final floorPlanController = TextEditingController();
 
     // --- State ---
@@ -213,6 +219,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     String? selectedBlockId;
     String? selectedApartmentType;
     String selectedStatus = 'Vacant';
+    String? selectedOccupancyType;
     String? selectedOfferingType;
     String? selectedFurnishing;
     String? selectedViewType;
@@ -238,6 +245,13 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     bool hasWaterMeter = false;
     bool hasElectricityMeter = false;
     bool hasNaturalGasMeter = false;
+    bool hasMosque = false;
+    bool hasSchool = false;
+    bool hasRecreationClub = false;
+    bool hasPlaygrounds = false;
+    bool hasSportsHealthClub = false;
+    bool hasHealthUnit = false;
+    bool hasSmartHome = false;
 
     List<File> selectedImages = [];
 
@@ -253,6 +267,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     final buildingStatusOptions = ['Under Construction', 'Ready to move in'];
     final paymentMethodOptions = ['Cash', 'Both'];
     final frequencyOptions = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'];
+    final occupancyOptions = ['Owner', 'Tenant', 'None'];
 
     final statusLabels = {
       'Vacant': 'شاغرة',
@@ -270,6 +285,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
     final conditionLabels = {'Excellent': 'ممتازة', 'Good': 'جيدة', 'Fair': 'مقبولة', 'Needs Repair': 'تحتاج إصلاح', 'Under Renovation': 'قيد التجديد'};
     final buildingStatusLabels = {'Under Construction': 'قيد الإنشاء', 'Ready to move in': 'جاهزة للسكن'};
     final paymentMethodLabels = {'Cash': 'نقدي', 'Both': 'كلاهما'};
+    final occupancyLabels = {'Owner': 'مالك', 'Tenant': 'مستأجر', 'None': 'بدون'};
     final frequencyLabels = {'Monthly': 'شهري', 'Quarterly': 'ربع سنوي', 'Semi-Annual': 'نصف سنوي', 'Annual': 'سنوي'};
 
     Future<void> pickDate(TextEditingController c) async {
@@ -441,6 +457,10 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                     ]),
                   ),
                 ]),
+                if (selectedBuildingStatus == 'Under Construction') ...[
+                  const SizedBox(height: 12),
+                  _buildDateField('تاريخ انتهاء الإنشاء', constructionEndController, () => pickDate(constructionEndController)),
+                ],
 
                 // --- Amenities ---
                 const SizedBox(height: 16),
@@ -461,6 +481,13 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                   _buildAmenityChip('عداد ماء', hasWaterMeter, (v) => setSheetState(() => hasWaterMeter = v)),
                   _buildAmenityChip('عداد كهرباء', hasElectricityMeter, (v) => setSheetState(() => hasElectricityMeter = v)),
                   _buildAmenityChip('عداد غاز', hasNaturalGasMeter, (v) => setSheetState(() => hasNaturalGasMeter = v)),
+                  _buildAmenityChip('مسجد', hasMosque, (v) => setSheetState(() => hasMosque = v)),
+                  _buildAmenityChip('مدرسة', hasSchool, (v) => setSheetState(() => hasSchool = v)),
+                  _buildAmenityChip('نادي ترفيهي', hasRecreationClub, (v) => setSheetState(() => hasRecreationClub = v)),
+                  _buildAmenityChip('ملاعب', hasPlaygrounds, (v) => setSheetState(() => hasPlaygrounds = v)),
+                  _buildAmenityChip('نادي رياضي وصحي', hasSportsHealthClub, (v) => setSheetState(() => hasSportsHealthClub = v)),
+                  _buildAmenityChip('وحدة صحية', hasHealthUnit, (v) => setSheetState(() => hasHealthUnit = v)),
+                  _buildAmenityChip('منزل ذكي', hasSmartHome, (v) => setSheetState(() => hasSmartHome = v)),
                 ]),
 
                 // --- Status & Financial ---
@@ -495,6 +522,15 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                     ]),
                   ),
                 ]),
+                const SizedBox(height: 12),
+                const Text('نوع الإشغال', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedOccupancyType,
+                  isExpanded: true, hint: const Text('اختر'),
+                  items: occupancyOptions.map((o) => DropdownMenuItem(value: o, child: Text(occupancyLabels[o] ?? o))).toList(),
+                  onChanged: (v) => setSheetState(() => selectedOccupancyType = v),
+                ),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(child: _buildField('الإيجار الشهري', rentController, '750000', isNumber: true)),
@@ -549,7 +585,19 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                   Row(children: [
                     Expanded(child: _buildField('الدفعة الأولى', downPaymentController, '100000', isNumber: true)),
                     const SizedBox(width: 12),
+                    Expanded(child: _buildField('دفعة الاستلام', handoverPaymentController, '50000', isNumber: true)),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
                     Expanded(child: _buildField('قسط شهري', monthlyInstallmentController, '25000', isNumber: true)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildField('قسط ربع سنوي', quarterlyInstallmentController, '75000', isNumber: true)),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _buildField('قسط نصف سنوي', semiAnnualInstallmentController, '150000', isNumber: true)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildField('قسط سنوي', annualInstallmentController, '300000', isNumber: true)),
                   ]),
                   const SizedBox(height: 12),
                   Row(children: [
@@ -574,6 +622,8 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
 
                 const SizedBox(height: 16),
                 const Divider(),
+                _buildDateField('تاريخ آخر فحص', lastInspectionController, () => pickDate(lastInspectionController)),
+                const SizedBox(height: 12),
                 const Text('ملاحظات', style: TextStyle(fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 TextField(controller: notesController, maxLines: 3, decoration: const InputDecoration(hintText: 'أدخل ملاحظات...')),
@@ -666,7 +716,15 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                           'hasWaterMeter': hasWaterMeter,
                           'hasElectricityMeter': hasElectricityMeter,
                           'hasNaturalGasMeter': hasNaturalGasMeter,
+                          'hasMosque': hasMosque,
+                          'hasSchool': hasSchool,
+                          'hasRecreationClub': hasRecreationClub,
+                          'hasPlaygrounds': hasPlaygrounds,
+                          'hasSportsHealthClub': hasSportsHealthClub,
+                          'hasHealthUnit': hasHealthUnit,
+                          'hasSmartHome': hasSmartHome,
                           'status': selectedStatus,
+                          'occupancyType': selectedOccupancyType,
                           'offeringType': selectedOfferingType,
                           'monthlyRent': numOrNull(rentController.text),
                           'monthlyMaintenanceFee': numOrNull(monthlyMaintenanceFeeController.text),
@@ -680,10 +738,16 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
                           'throughBroker': throughBroker,
                           'cashPrice': numOrNull(cashPriceController.text),
                           'downPayment': numOrNull(downPaymentController.text),
+                          'handoverPayment': numOrNull(handoverPaymentController.text),
                           'monthlyInstallment': numOrNull(monthlyInstallmentController.text),
+                          'quarterlyInstallment': numOrNull(quarterlyInstallmentController.text),
+                          'semiAnnualInstallment': numOrNull(semiAnnualInstallmentController.text),
+                          'annualInstallment': numOrNull(annualInstallmentController.text),
                           'installmentFrequency': selectedPaymentMethod == 'Both' ? selectedInstallmentFrequency : null,
                           'installmentYears': numOrNull(installmentYearsController.text),
                           'totalInstallmentPrice': numOrNull(totalInstallmentPriceController.text),
+                          'constructionEndDate': selectedBuildingStatus == 'Under Construction' && constructionEndController.text.isNotEmpty ? constructionEndController.text : null,
+                          'lastInspectionDate': lastInspectionController.text.isEmpty ? null : lastInspectionController.text,
                           'notes': notesController.text.isEmpty ? null : notesController.text,
                           'floorPlan': floorPlanController.text.isEmpty ? null : floorPlanController.text,
                           'documents': uploadedDocs,

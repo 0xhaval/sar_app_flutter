@@ -21,8 +21,9 @@ class AuthService {
     return data;
   }
 
-  static Future<void> deleteAccount() async {
-    await ApiService.deleteJson('/api/mobile/me');
+  /// Removes every persisted session key. Used by logout, account deletion,
+  /// and the session-expiry handler in main.dart.
+  static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
@@ -32,19 +33,20 @@ class AuthService {
     await prefs.remove('user_roles');
   }
 
+  static Future<void> deleteAccount() async {
+    await ApiService.deleteJson('/api/mobile/me');
+    await clearSession();
+  }
+
   static Future<void> logout() async {
+    // Clear locally first: a stale token would 401 on the server call and
+    // needlessly trip the session-expired handler during a normal logout.
+    await clearSession();
     try {
       await ApiService.postJson('/api/mobile/auth/logout');
     } catch (_) {
       /* server-side is a no-op; ignore errors so logout always succeeds */
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    await prefs.remove('user_id');
-    await prefs.remove('user_email');
-    await prefs.remove('full_name');
-    await prefs.remove('employee_id');
-    await prefs.remove('user_roles');
   }
 
   static Future<bool> isLoggedIn() async {
