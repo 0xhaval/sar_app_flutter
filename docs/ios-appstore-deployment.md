@@ -164,7 +164,44 @@ under **TestFlight**.
 | Keywords | `سار,موظفين,حضور,عقارات,اجازات` etc. |
 | Support URL | `https://sar-iq.com` |
 | Privacy Policy URL | `https://sar-iq.com/privacy` (**must be live and reachable**) |
-| Screenshots | iPhone 6.9" (1320×2868) required; iPad 13" (2064×2752) required while iPad is targeted (§6). Take from Simulator: `flutter run --release` on "iPhone 16 Pro Max" sim → `Cmd+S`. Good set: dashboard, attendance, apartments, تصفّح, customers, profile |
+| Screenshots | **Ready-made set in `docs/store-screenshots/`** — see §10.1. iPhone 6.9" (1320×2868) required; iPad 13" (2064×2752) also required while iPad is targeted (§6) |
+
+### 10.1 Screenshots
+
+A complete 8-image set at the exact required iPhone 6.9" resolution
+(1320×2868, portrait) lives in **`docs/store-screenshots/`**:
+
+| File | Screen |
+|---|---|
+| `01-login.png` | تسجيل الدخول |
+| `02-dashboard.png` | الرئيسية (stats + recent activity) |
+| `03-attendance.png` | الحضور والانصراف (checked-in + calendar) |
+| `04-leaves.png` | الإجازات |
+| `05-apartments.png` | الشقق |
+| `06-inventory.png` | تصفّح المخزون |
+| `07-customers.png` | العملاء |
+| `08-profile.png` | الملف الشخصي |
+
+Upload order suggestion: dashboard → attendance → تصفّح → customers →
+apartments → leaves → profile (login last or omitted).
+
+**How they were made / how to regenerate:** rendered from the PWA twin
+(`../sar_pwa`, visually 1:1 with this app) against mocked demo data, via a
+Playwright script:
+
+```bash
+cd ../sar_pwa
+STORE_SHOTS=1 npx playwright test store-screenshots
+# writes 1320×2868 PNGs into sar_app/docs/store-screenshots/
+# demo data lives in sar_pwa/tests/e2e/store-screenshots.spec.ts
+```
+
+**Caveat:** these are captures of the PWA twin, not the Flutter binary.
+They are pixel-faithful to the app's design and fine to upload, but the
+safest final set is retaken from the real app on a Mac: `flutter run
+--release` on an "iPhone 16 Pro Max" simulator → `Cmd+S` on each screen
+(same 8 screens, same order). If iPad stays targeted (§6), capture the same
+set on an "iPad Pro 13-inch" simulator for the 2064×2752 slot.
 
 ## 11. App Privacy (nutrition labels) — declare exactly this
 
