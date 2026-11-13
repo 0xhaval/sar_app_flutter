@@ -454,6 +454,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final counts = (customer['_count'] as Map?) ?? const {};
     final ownedCount = (counts['ownedApartments'] as num?)?.toInt() ?? 0;
     final tenantCount = (counts['tenantApartments'] as num?)?.toInt() ?? 0;
+    final interested = List<Map<String, dynamic>>.from(
+        customer['interestedCompounds'] ?? []);
+    final compoundNames = interested
+        .map((ic) =>
+            ((ic['compound'] as Map?) ?? const {})['compoundName']
+                ?.toString() ??
+            '')
+        .where((n) => n.isNotEmpty)
+        .toList();
+    final interestLabel = compoundNames.isEmpty
+        ? ''
+        : compoundNames.length == 1
+            ? compoundNames.first
+            : '${compoundNames.first} +${compoundNames.length - 1}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -608,6 +622,36 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ),
               ),
             ),
+            if (interestLabel.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.apartment,
+                        size: 14, color: Color(0xFF0D7A6F)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        interestLabel,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF0D7A6F),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (ownedCount > 0 || tenantCount > 0) ...[
               const SizedBox(height: 12),
               Row(
