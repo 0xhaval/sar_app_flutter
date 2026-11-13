@@ -235,6 +235,34 @@ Future<bool> addCustomerNote(BuildContext context, String customerId) async {
   }
 }
 
+/// Opens the status sheet and applies the choice to all [customerIds].
+/// Returns true when applied (caller should refresh).
+Future<bool> bulkChangeCustomerStatus(
+  BuildContext context,
+  List<String> customerIds,
+) async {
+  final result = await _showStatusSheet(context);
+  if (result == null) return false;
+  try {
+    final res = await ApiService.postJson(
+      '/api/mobile/customers/bulk/status',
+      body: {
+        'ids': customerIds,
+        'status': result['status'],
+        if ((result['description'] ?? '').isNotEmpty)
+          'description': result['description'],
+      },
+    );
+    final count = (res is Map ? res['count'] as num? : null)?.toInt() ??
+        customerIds.length;
+    Fluttertoast.showToast(msg: 'تم تحديث $count عميل');
+    return true;
+  } catch (e) {
+    Fluttertoast.showToast(msg: 'فشل تحديث الحالة: $e');
+    return false;
+  }
+}
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -248,6 +276,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
   List<Map<String, dynamic>> _customers = [];
   String _search = '';
   bool _canAddCustomer = false;
+  bool _selectMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -318,8 +348,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget build(BuildContext context) {
     final filtered = _filtered;
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
@@ -352,7 +384,31 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           ),
                         ),
                       ),
-                      if (_canAddCustomer)
+                      Material(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => setState(() {
+                            _selectMode = !_selectMode;
+                            _selectedIds.clear();
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: Text(
+                              _selectMode ? 'إلغاء' : 'تحديد',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_canAddCustomer && !_selectMode) ...[
+                        const SizedBox(width: 8),
                         Material(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(10),
@@ -380,6 +436,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -441,11 +498,62 @@ class _CustomersScreenState extends State<CustomersScreen> {
             ),
           ],
         ),
-      ),
+          ),
+        ),
+        if (_selectMode && _selectedIds.isNotEmpty)
+          Positioned(
+            right: 16,
+            left: 16,
+            bottom: 16,
+            child: Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF284A63),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Text(
+                      '${_selectedIds.length} محدد',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final updated = await bulkChangeCustomerStatus(
+                          context,
+                          _selectedIds.toList(),
+                        );
+                        if (updated && mounted) {
+                          setState(() {
+                            _selectMode = false;
+                            _selectedIds.clear();
+                          });
+                          _loadData();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('تغيير الحالة'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildCustomerCard(Map<String, dynamic> customer) {
+    final id = customer['id']?.toString() ?? '';
+    final selected = _selectedIds.contains(id);
     final name = (customer['customerName'] ?? '').toString();
     final phone = (customer['phone'] ?? '').toString();
     final email = (customer['email'] ?? '').toString();
@@ -475,15 +583,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: selected ? const Color(0xFF16A34A) : const Color(0xFFE5E7EB),
+        ),
       ),
       child: InkWell(
         onTap: () async {
+          if (_selectMode) {
+            setState(() {
+              if (!_selectedIds.add(id)) _selectedIds.remove(id);
+            });
+            return;
+          }
           await Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => CustomerDetailScreen(
-                customerId: customer['id']?.toString() ?? '',
-              ),
+              builder: (_) => CustomerDetailScreen(customerId: id),
             ),
           );
         },
@@ -493,6 +607,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
           children: [
             Row(
               children: [
+                if (_selectMode) ...[
+                  Icon(
+                    selected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: selected
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF9CA3AF),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: const Color(0xFFDBEAFE),
@@ -586,9 +711,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
             InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () async {
+                if (_selectMode) {
+                  setState(() {
+                    if (!_selectedIds.add(id)) _selectedIds.remove(id);
+                  });
+                  return;
+                }
                 final updated = await changeCustomerStatus(
                   context,
-                  customer['id']?.toString() ?? '',
+                  id,
                   current: status.isEmpty ? null : status,
                 );
                 if (updated) _loadData();
