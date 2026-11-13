@@ -103,6 +103,17 @@ class ApiService {
     return parseBody(response, authenticated: _hasToken(headers));
   }
 
+  static Future<dynamic> putJson(String path,
+      {Map<String, dynamic>? body}) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      _uri(path),
+      headers: headers,
+      body: body != null ? jsonEncode(body) : null,
+    );
+    return parseBody(response, authenticated: _hasToken(headers));
+  }
+
   /// Uploads a file to /api/mobile/upload. Returns the public URL.
   static Future<String> uploadFile(File file) async {
     final headers = await _getHeaders(json: false);
