@@ -3,6 +3,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:fluttertoast/fluttertoast.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/compound_picker_sheet.dart';
 
 /// Fixed customer-status vocabulary. MUST stay identical to
 /// CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
@@ -1169,6 +1170,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   String? _customerType;
   bool _saving = false;
   String? _phoneError;
+  List<CompoundOption> _selectedCompounds = [];
 
   @override
   void dispose() {
@@ -1195,6 +1197,9 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       if (_emailController.text.trim().isNotEmpty)
         'email': _emailController.text.trim(),
       if (_customerType != null) 'customerType': _customerType,
+      if (_selectedCompounds.isNotEmpty)
+        'interestedCompoundIds':
+            _selectedCompounds.map((c) => c.id).toList(),
       'budget': ?budget,
     };
 
@@ -1267,6 +1272,38 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                     DropdownMenuItem(value: 'company', child: Text('شركة')),
                   ],
                   onChanged: (v) => setState(() => _customerType = v),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final picked = await showCompoundPickerSheet(
+                      context,
+                      initialIds:
+                          _selectedCompounds.map((c) => c.id).toList(),
+                    );
+                    if (picked != null) {
+                      setState(() => _selectedCompounds = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: _decoration('المجمعات المهتم بها'),
+                    child: Text(
+                      _selectedCompounds.isEmpty
+                          ? 'اختر المجمعات (اختياري)'
+                          : _selectedCompounds
+                              .map((c) => c.compoundName)
+                              .join('، '),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _selectedCompounds.isEmpty
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF111827),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               _field(
