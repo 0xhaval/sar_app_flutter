@@ -3,19 +3,36 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:fluttertoast/fluttertoast.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/compound_picker_sheet.dart';
 
 /// Fixed customer-status vocabulary. MUST stay identical to
 /// CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
-const List<String> kCustomerStatuses = ['مهتم', 'غير مهتم', 'قام بالشراء'];
+const List<String> kCustomerStatuses = [
+  'جديد',
+  'تم التواصل',
+  'زار المجمع',
+  'مهتم',
+  'غير مهتم',
+  'مغلق - قام بالشراء',
+  'مغلق - لم يشترِ',
+];
 
 Color _statusColor(String status) {
   switch (status) {
+    case 'جديد':
+      return const Color(0xFF6B7280);
+    case 'تم التواصل':
+      return const Color(0xFF0891B2);
+    case 'زار المجمع':
+      return const Color(0xFF7C3AED);
     case 'مهتم':
       return const Color(0xFF16A34A);
     case 'غير مهتم':
       return const Color(0xFFDC2626);
-    case 'قام بالشراء':
+    case 'مغلق - قام بالشراء':
       return const Color(0xFF2563EB);
+    case 'مغلق - لم يشترِ':
+      return const Color(0xFF991B1B);
     default:
       return const Color(0xFF6B7280);
   }
@@ -133,6 +150,119 @@ Future<bool> changeCustomerStatus(
   }
 }
 
+/// Bottom sheet: note-only feedback (no status change). Resolves to the
+/// trimmed note text or null when dismissed.
+Future<String?> _showNoteSheet(BuildContext context) {
+  final noteController = TextEditingController();
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheetState) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                      'إضافة ملاحظة',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    maxLength: 500,
+                    onChanged: (_) => setSheetState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'الملاحظة',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: noteController.text.trim().isEmpty
+                          ? null
+                          : () =>
+                              Navigator.of(ctx).pop(noteController.text.trim()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF284A63),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('حفظ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Opens the note sheet for [customerId] and posts a note-only status log.
+/// Returns true when a note was added (caller should refresh).
+Future<bool> addCustomerNote(BuildContext context, String customerId) async {
+  final note = await _showNoteSheet(context);
+  if (note == null || note.isEmpty) return false;
+  try {
+    await ApiService.postJson(
+      '/api/mobile/customers/$customerId/status',
+      body: {'description': note},
+    );
+    Fluttertoast.showToast(msg: 'تمت إضافة الملاحظة');
+    return true;
+  } catch (e) {
+    Fluttertoast.showToast(msg: 'فشل إضافة الملاحظة: $e');
+    return false;
+  }
+}
+
+/// Opens the status sheet and applies the choice to all [customerIds].
+/// Returns true when applied (caller should refresh).
+Future<bool> bulkChangeCustomerStatus(
+  BuildContext context,
+  List<String> customerIds,
+) async {
+  final result = await _showStatusSheet(context);
+  if (result == null) return false;
+  try {
+    final res = await ApiService.postJson(
+      '/api/mobile/customers/bulk/status',
+      body: {
+        'ids': customerIds,
+        'status': result['status'],
+        if ((result['description'] ?? '').isNotEmpty)
+          'description': result['description'],
+      },
+    );
+    final count = (res is Map ? res['count'] as num? : null)?.toInt() ??
+        customerIds.length;
+    Fluttertoast.showToast(msg: 'تم تحديث $count عميل');
+    return true;
+  } catch (e) {
+    Fluttertoast.showToast(msg: 'فشل تحديث الحالة: $e');
+    return false;
+  }
+}
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -146,6 +276,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
   List<Map<String, dynamic>> _customers = [];
   String _search = '';
   bool _canAddCustomer = false;
+  bool _selectMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -216,8 +348,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget build(BuildContext context) {
     final filtered = _filtered;
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
@@ -250,7 +384,31 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           ),
                         ),
                       ),
-                      if (_canAddCustomer)
+                      Material(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => setState(() {
+                            _selectMode = !_selectMode;
+                            _selectedIds.clear();
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: Text(
+                              _selectMode ? 'إلغاء' : 'تحديد',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_canAddCustomer && !_selectMode) ...[
+                        const SizedBox(width: 8),
                         Material(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(10),
@@ -278,6 +436,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -339,11 +498,62 @@ class _CustomersScreenState extends State<CustomersScreen> {
             ),
           ],
         ),
-      ),
+          ),
+        ),
+        if (_selectMode && _selectedIds.isNotEmpty)
+          Positioned(
+            right: 16,
+            left: 16,
+            bottom: 16,
+            child: Material(
+              elevation: 6,
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF284A63),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Text(
+                      '${_selectedIds.length} محدد',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final updated = await bulkChangeCustomerStatus(
+                          context,
+                          _selectedIds.toList(),
+                        );
+                        if (updated && mounted) {
+                          setState(() {
+                            _selectMode = false;
+                            _selectedIds.clear();
+                          });
+                          _loadData();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('تغيير الحالة'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildCustomerCard(Map<String, dynamic> customer) {
+    final id = customer['id']?.toString() ?? '';
+    final selected = _selectedIds.contains(id);
     final name = (customer['customerName'] ?? '').toString();
     final phone = (customer['phone'] ?? '').toString();
     final email = (customer['email'] ?? '').toString();
@@ -352,6 +562,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final counts = (customer['_count'] as Map?) ?? const {};
     final ownedCount = (counts['ownedApartments'] as num?)?.toInt() ?? 0;
     final tenantCount = (counts['tenantApartments'] as num?)?.toInt() ?? 0;
+    final interested = List<Map<String, dynamic>>.from(
+        customer['interestedCompounds'] ?? []);
+    final compoundNames = interested
+        .map((ic) =>
+            ((ic['compound'] as Map?) ?? const {})['compoundName']
+                ?.toString() ??
+            '')
+        .where((n) => n.isNotEmpty)
+        .toList();
+    final interestLabel = compoundNames.isEmpty
+        ? ''
+        : compoundNames.length == 1
+            ? compoundNames.first
+            : '${compoundNames.first} +${compoundNames.length - 1}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -359,15 +583,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: selected ? const Color(0xFF16A34A) : const Color(0xFFE5E7EB),
+        ),
       ),
       child: InkWell(
         onTap: () async {
+          if (_selectMode) {
+            setState(() {
+              if (!_selectedIds.add(id)) _selectedIds.remove(id);
+            });
+            return;
+          }
           await Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => CustomerDetailScreen(
-                customerId: customer['id']?.toString() ?? '',
-              ),
+              builder: (_) => CustomerDetailScreen(customerId: id),
             ),
           );
         },
@@ -377,6 +607,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
           children: [
             Row(
               children: [
+                if (_selectMode) ...[
+                  Icon(
+                    selected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: selected
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF9CA3AF),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: const Color(0xFFDBEAFE),
@@ -470,9 +711,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
             InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: () async {
+                if (_selectMode) {
+                  setState(() {
+                    if (!_selectedIds.add(id)) _selectedIds.remove(id);
+                  });
+                  return;
+                }
                 final updated = await changeCustomerStatus(
                   context,
-                  customer['id']?.toString() ?? '',
+                  id,
                   current: status.isEmpty ? null : status,
                 );
                 if (updated) _loadData();
@@ -506,6 +753,36 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ),
               ),
             ),
+            if (interestLabel.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.apartment,
+                        size: 14, color: Color(0xFF0D7A6F)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        interestLabel,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF0D7A6F),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (ownedCount > 0 || tenantCount > 0) ...[
               const SizedBox(height: 12),
               Row(
@@ -610,6 +887,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     if (updated && mounted) _load();
   }
 
+  Future<void> _editCompounds() async {
+    final interested = List<Map<String, dynamic>>.from(
+        _customer?['interestedCompounds'] ?? []);
+    final currentIds = interested
+        .map((ic) =>
+            ((ic['compound'] as Map?) ?? const {})['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final picked =
+        await showCompoundPickerSheet(context, initialIds: currentIds);
+    if (picked == null) return;
+    try {
+      await ApiService.putJson(
+        '/api/mobile/customers/${widget.customerId}/compounds',
+        body: {'compoundIds': picked.map((c) => c.id).toList()},
+      );
+      Fluttertoast.showToast(msg: 'تم تحديث المجمعات المهتم بها');
+      if (mounted) _load();
+    } catch (e) {
+      Fluttertoast.showToast(msg: 'فشل تحديث المجمعات: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -648,6 +948,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final currentStatus = (c['status'] ?? '').toString();
     final budget = (c['budget'] as num?)?.toDouble();
     final createdAt = c['createdAt']?.toString();
+    final customerCode = (c['customerCode'] ?? '').toString();
+    final assignedAt = c['assignedAt']?.toString();
+    final interested =
+        List<Map<String, dynamic>>.from(c['interestedCompounds'] ?? []);
     final favs = List<Map<String, dynamic>>.from(c['favouriteAddresses'] ?? []);
     final logs = List<Map<String, dynamic>>.from(c['statusLogs'] ?? []);
     final owned = List<Map<String, dynamic>>.from(c['ownedApartments'] ?? []);
@@ -692,6 +996,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (customerCode.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    customerCode,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
               if (type.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -746,7 +1065,42 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               'تاريخ الإضافة',
               _formatDate(createdAt),
             ),
+          if (assignedAt != null && assignedAt.isNotEmpty)
+            _infoRow(
+              Icons.event_available,
+              'تاريخ الاستلام',
+              _formatDate(assignedAt),
+            ),
         ]),
+        _section(
+          'المجمعات المهتم بها',
+          interested.isEmpty
+              ? [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      'لا توجد مجمعات',
+                      style:
+                          TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                ]
+              : interested.map((ic) {
+                  final compound = (ic['compound'] as Map?) ?? const {};
+                  return _infoRow(
+                    Icons.apartment,
+                    'مجمع',
+                    (compound['compoundName'] ?? '').toString(),
+                  );
+                }).toList(),
+          action: TextButton(
+            onPressed: _editCompounds,
+            child: const Text(
+              'تعديل',
+              style: TextStyle(color: Color(0xFF16A34A), fontSize: 13),
+            ),
+          ),
+        ),
         if (owned.isNotEmpty)
           _section(
             'العقارات المملوكة (${owned.length})',
@@ -790,6 +1144,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF284A63),
                 foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final added = await addCustomerNote(context, widget.customerId);
+                if (added && mounted) _load();
+              },
+              icon: const Icon(Icons.note_add_outlined),
+              label: const Text('إضافة ملاحظة'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF284A63),
+                side: const BorderSide(color: Color(0xFF284A63)),
               ),
             ),
           ),
@@ -881,7 +1254,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
-  Widget _section(String title, List<Widget> children) {
+  Widget _section(String title, List<Widget> children, {Widget? action}) {
     if (children.isEmpty) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -894,13 +1267,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              ?action,
+            ],
           ),
           const SizedBox(height: 8),
           const Divider(height: 1),
@@ -1048,6 +1428,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   final _budgetController = TextEditingController();
   String? _customerType;
   bool _saving = false;
+  String? _phoneError;
+  List<CompoundOption> _selectedCompounds = [];
 
   @override
   void dispose() {
@@ -1060,7 +1442,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _saving) return;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _phoneError = null;
+    });
 
     final budgetText = _budgetController.text.trim();
     final budget = num.tryParse(budgetText);
@@ -1071,6 +1456,9 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       if (_emailController.text.trim().isNotEmpty)
         'email': _emailController.text.trim(),
       if (_customerType != null) 'customerType': _customerType,
+      if (_selectedCompounds.isNotEmpty)
+        'interestedCompoundIds':
+            _selectedCompounds.map((c) => c.id).toList(),
       'budget': ?budget,
     };
 
@@ -1082,6 +1470,12 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
+      if (e is ApiException && e.statusCode == 409) {
+        setState(() => _phoneError = e.message.isNotEmpty
+            ? e.message
+            : 'هذا الرقم مسجّل مسبقاً لعميل آخر');
+        return;
+      }
       Fluttertoast.showToast(msg: 'فشل إضافة العميل: $e');
     }
   }
@@ -1112,6 +1506,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 controller: _phoneController,
                 label: 'الهاتف',
                 keyboardType: TextInputType.phone,
+                errorText: _phoneError,
+                onChanged: (_) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
               ),
               _field(
                 controller: _emailController,
@@ -1133,6 +1531,38 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                     DropdownMenuItem(value: 'company', child: Text('شركة')),
                   ],
                   onChanged: (v) => setState(() => _customerType = v),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final picked = await showCompoundPickerSheet(
+                      context,
+                      initialIds:
+                          _selectedCompounds.map((c) => c.id).toList(),
+                    );
+                    if (picked != null) {
+                      setState(() => _selectedCompounds = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: _decoration('المجمعات المهتم بها'),
+                    child: Text(
+                      _selectedCompounds.isEmpty
+                          ? 'اختر المجمعات (اختياري)'
+                          : _selectedCompounds
+                              .map((c) => c.compoundName)
+                              .join('، '),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _selectedCompounds.isEmpty
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF111827),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               _field(
@@ -1174,6 +1604,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     required String label,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    String? errorText,
+    void Function(String)? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1181,7 +1613,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
         controller: controller,
         keyboardType: keyboardType,
         validator: validator,
-        decoration: _decoration(label),
+        onChanged: onChanged,
+        decoration: _decoration(label).copyWith(errorText: errorText),
       ),
     );
   }

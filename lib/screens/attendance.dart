@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart' hide TextDirection;
@@ -21,16 +22,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   bool _submitting = false;
   List<AttendanceRecord> _attendanceData = [];
   List<CheckInRequest> _pendingRequests = [];
+  Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+    // Keep the header clock ticking like the PWA (re-render every second).
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
