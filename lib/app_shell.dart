@@ -4,6 +4,7 @@ import 'screens/dashboard.dart';
 import 'screens/leaves.dart';
 import 'screens/attendance.dart';
 import 'screens/apartments.dart';
+import 'screens/inventory.dart';
 import 'screens/customers.dart';
 import 'screens/profile.dart';
 
@@ -22,6 +23,7 @@ class _AppShellState extends State<AppShell> {
     LeavesScreen(),
     AttendanceScreen(),
     ApartmentsScreen(),
+    InventoryScreen(),
     CustomersScreen(),
     ProfileScreen(),
   ];
@@ -65,8 +67,9 @@ class _AppShellState extends State<AppShell> {
                   _buildNavItem(1, Icons.description_outlined, Icons.description, 'الإجازات'),
                   _buildNavItem(2, Icons.calendar_today_outlined, Icons.calendar_today, 'الحضور'),
                   _buildNavItem(3, Icons.apartment_outlined, Icons.apartment, 'الشقق'),
-                  _buildNavItem(4, Icons.people_outline, Icons.people, 'العملاء'),
-                  _buildNavItem(5, Icons.person_outline, Icons.person, 'الملف'),
+                  _buildNavItem(4, Icons.search, Icons.search, 'تصفّح'),
+                  _buildNavItem(5, Icons.people_outline, Icons.people, 'العملاء'),
+                  _buildNavItem(6, Icons.person_outline, Icons.person, 'الملف'),
                 ],
               ),
             ),
