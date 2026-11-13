@@ -6,16 +6,32 @@ import '../services/auth_service.dart';
 
 /// Fixed customer-status vocabulary. MUST stay identical to
 /// CUSTOMER_STATUSES in real-estate-app src/lib/validations.ts.
-const List<String> kCustomerStatuses = ['مهتم', 'غير مهتم', 'قام بالشراء'];
+const List<String> kCustomerStatuses = [
+  'جديد',
+  'تم التواصل',
+  'زار المجمع',
+  'مهتم',
+  'غير مهتم',
+  'مغلق - قام بالشراء',
+  'مغلق - لم يشترِ',
+];
 
 Color _statusColor(String status) {
   switch (status) {
+    case 'جديد':
+      return const Color(0xFF6B7280);
+    case 'تم التواصل':
+      return const Color(0xFF0891B2);
+    case 'زار المجمع':
+      return const Color(0xFF7C3AED);
     case 'مهتم':
       return const Color(0xFF16A34A);
     case 'غير مهتم':
       return const Color(0xFFDC2626);
-    case 'قام بالشراء':
+    case 'مغلق - قام بالشراء':
       return const Color(0xFF2563EB);
+    case 'مغلق - لم يشترِ':
+      return const Color(0xFF991B1B);
     default:
       return const Color(0xFF6B7280);
   }
