@@ -712,6 +712,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     if (updated && mounted) _load();
   }
 
+  Future<void> _editCompounds() async {
+    final interested = List<Map<String, dynamic>>.from(
+        _customer?['interestedCompounds'] ?? []);
+    final currentIds = interested
+        .map((ic) =>
+            ((ic['compound'] as Map?) ?? const {})['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final picked =
+        await showCompoundPickerSheet(context, initialIds: currentIds);
+    if (picked == null) return;
+    try {
+      await ApiService.putJson(
+        '/api/mobile/customers/${widget.customerId}/compounds',
+        body: {'compoundIds': picked.map((c) => c.id).toList()},
+      );
+      Fluttertoast.showToast(msg: 'تم تحديث المجمعات المهتم بها');
+      if (mounted) _load();
+    } catch (e) {
+      Fluttertoast.showToast(msg: 'فشل تحديث المجمعات: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -750,6 +773,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     final currentStatus = (c['status'] ?? '').toString();
     final budget = (c['budget'] as num?)?.toDouble();
     final createdAt = c['createdAt']?.toString();
+    final customerCode = (c['customerCode'] ?? '').toString();
+    final assignedAt = c['assignedAt']?.toString();
+    final interested =
+        List<Map<String, dynamic>>.from(c['interestedCompounds'] ?? []);
     final favs = List<Map<String, dynamic>>.from(c['favouriteAddresses'] ?? []);
     final logs = List<Map<String, dynamic>>.from(c['statusLogs'] ?? []);
     final owned = List<Map<String, dynamic>>.from(c['ownedApartments'] ?? []);
@@ -794,6 +821,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (customerCode.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    customerCode,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
               if (type.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -848,7 +890,42 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               'تاريخ الإضافة',
               _formatDate(createdAt),
             ),
+          if (assignedAt != null && assignedAt.isNotEmpty)
+            _infoRow(
+              Icons.event_available,
+              'تاريخ الاستلام',
+              _formatDate(assignedAt),
+            ),
         ]),
+        _section(
+          'المجمعات المهتم بها',
+          interested.isEmpty
+              ? [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      'لا توجد مجمعات',
+                      style:
+                          TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                ]
+              : interested.map((ic) {
+                  final compound = (ic['compound'] as Map?) ?? const {};
+                  return _infoRow(
+                    Icons.apartment,
+                    'مجمع',
+                    (compound['compoundName'] ?? '').toString(),
+                  );
+                }).toList(),
+          action: TextButton(
+            onPressed: _editCompounds,
+            child: const Text(
+              'تعديل',
+              style: TextStyle(color: Color(0xFF16A34A), fontSize: 13),
+            ),
+          ),
+        ),
         if (owned.isNotEmpty)
           _section(
             'العقارات المملوكة (${owned.length})',
@@ -1002,7 +1079,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
-  Widget _section(String title, List<Widget> children) {
+  Widget _section(String title, List<Widget> children, {Widget? action}) {
     if (children.isEmpty) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1015,13 +1092,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              ?action,
+            ],
           ),
           const SizedBox(height: 8),
           const Divider(height: 1),
