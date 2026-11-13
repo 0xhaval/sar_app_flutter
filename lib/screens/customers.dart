@@ -149,6 +149,91 @@ Future<bool> changeCustomerStatus(
   }
 }
 
+/// Bottom sheet: note-only feedback (no status change). Resolves to the
+/// trimmed note text or null when dismissed.
+Future<String?> _showNoteSheet(BuildContext context) {
+  final noteController = TextEditingController();
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheetState) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: Text(
+                      'إضافة ملاحظة',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    maxLength: 500,
+                    onChanged: (_) => setSheetState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'الملاحظة',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: noteController.text.trim().isEmpty
+                          ? null
+                          : () =>
+                              Navigator.of(ctx).pop(noteController.text.trim()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF284A63),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('حفظ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Opens the note sheet for [customerId] and posts a note-only status log.
+/// Returns true when a note was added (caller should refresh).
+Future<bool> addCustomerNote(BuildContext context, String customerId) async {
+  final note = await _showNoteSheet(context);
+  if (note == null || note.isEmpty) return false;
+  try {
+    await ApiService.postJson(
+      '/api/mobile/customers/$customerId/status',
+      body: {'description': note},
+    );
+    Fluttertoast.showToast(msg: 'تمت إضافة الملاحظة');
+    return true;
+  } catch (e) {
+    Fluttertoast.showToast(msg: 'فشل إضافة الملاحظة: $e');
+    return false;
+  }
+}
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -810,6 +895,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             ),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final added = await addCustomerNote(context, widget.customerId);
+                if (added && mounted) _load();
+              },
+              icon: const Icon(Icons.note_add_outlined),
+              label: const Text('إضافة ملاحظة'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF284A63),
+                side: const BorderSide(color: Color(0xFF284A63)),
+              ),
+            ),
+          ),
+        ),
         if (logs.isNotEmpty)
           _section(
             'سجل الحالات',
@@ -1064,6 +1168,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   final _budgetController = TextEditingController();
   String? _customerType;
   bool _saving = false;
+  String? _phoneError;
 
   @override
   void dispose() {
@@ -1076,7 +1181,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _saving) return;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _phoneError = null;
+    });
 
     final budgetText = _budgetController.text.trim();
     final budget = num.tryParse(budgetText);
@@ -1098,6 +1206,12 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
+      if (e is ApiException && e.statusCode == 409) {
+        setState(() => _phoneError = e.message.isNotEmpty
+            ? e.message
+            : 'هذا الرقم مسجّل مسبقاً لعميل آخر');
+        return;
+      }
       Fluttertoast.showToast(msg: 'فشل إضافة العميل: $e');
     }
   }
@@ -1128,6 +1242,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 controller: _phoneController,
                 label: 'الهاتف',
                 keyboardType: TextInputType.phone,
+                errorText: _phoneError,
+                onChanged: (_) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
               ),
               _field(
                 controller: _emailController,
@@ -1190,6 +1308,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     required String label,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    String? errorText,
+    void Function(String)? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1197,7 +1317,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
         controller: controller,
         keyboardType: keyboardType,
         validator: validator,
-        decoration: _decoration(label),
+        onChanged: onChanged,
+        decoration: _decoration(label).copyWith(errorText: errorText),
       ),
     );
   }
