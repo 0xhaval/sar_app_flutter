@@ -169,7 +169,7 @@ class _CompoundPickerSheetState extends State<_CompoundPickerSheet> {
                     _options.where((o) => _selected.contains(o.id)).toList(),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF284A63),
+                    backgroundColor: const Color(0xFF111317),
                     foregroundColor: Colors.white,
                   ),
                   child: Text('حفظ (${_selected.length})'),

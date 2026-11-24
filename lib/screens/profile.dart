@@ -179,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity,
             height: 180,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Color(0xFF284A63), Color(0xFF3B6E71)]),
+              gradient: LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Color(0xFF111317), Color(0xFF2B2F36)]),
             ),
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -209,7 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 48,
-                                  backgroundColor: const Color(0xFF284A63),
+                                  backgroundColor: const Color(0xFF111317),
                                   child: Text(
                                     name.split(' ').where((n) => n.isNotEmpty).map((n) => n[0]).take(2).join(''),
                                     style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
@@ -223,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                   decoration: BoxDecoration(color: const Color(0xFFD9DAD9), borderRadius: BorderRadius.circular(20)),
-                                  child: Text(employeeId, style: const TextStyle(fontSize: 14, color: Color(0xFF3B6E71))),
+                                  child: Text(employeeId, style: const TextStyle(fontSize: 14, color: Color(0xFF2B2F36))),
                                 ),
                               ],
                             ),

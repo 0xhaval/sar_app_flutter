@@ -6,6 +6,7 @@ import 'app_shell.dart';
 import 'screens/login.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'theme/brand.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -32,19 +33,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ApiService.onSessionExpired = _onSessionExpired;
   final isLoggedIn = await AuthService.isLoggedIn();
-  runApp(SarApp(isLoggedIn: isLoggedIn));
+  runApp(PromsApp(isLoggedIn: isLoggedIn));
 }
 
-class SarApp extends StatelessWidget {
+class PromsApp extends StatelessWidget {
   final bool isLoggedIn;
 
-  const SarApp({super.key, required this.isLoggedIn});
+  const PromsApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'SAR Employee',
+      title: 'PROMS',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
@@ -56,11 +57,12 @@ class SarApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF284A63),
-          primary: const Color(0xFF284A63),
-          surface: const Color(0xFFF9FAFB),
+          seedColor: Brand.primary,
+          primary: Brand.primary,
+          secondary: Brand.gold,
+          surface: Brand.surface,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
+        scaffoldBackgroundColor: Brand.surface,
         textTheme: GoogleFonts.tajawalTextTheme(),
         cardTheme: CardThemeData(
           color: Colors.white,
@@ -74,15 +76,15 @@ class SarApp extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          headerBackgroundColor: const Color(0xFF284A63),
+          headerBackgroundColor: const Color(0xFF111317),
           headerForegroundColor: Colors.white,
           dayStyle: GoogleFonts.tajawal(fontSize: 14),
           yearStyle: GoogleFonts.tajawal(fontSize: 14),
-          todayBorder: const BorderSide(color: Color(0xFF284A63), width: 1.5),
+          todayBorder: const BorderSide(color: Color(0xFF111317), width: 1.5),
           surfaceTintColor: Colors.transparent,
           dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF284A63);
+              return const Color(0xFF111317);
             }
             return null;
           }),
@@ -104,7 +106,7 @@ class SarApp extends StatelessWidget {
           dayPeriodShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          dialHandColor: const Color(0xFF284A63),
+          dialHandColor: const Color(0xFF111317),
           dialBackgroundColor: const Color(0xFFD9DAD9),
           hourMinuteColor: WidgetStateColor.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
@@ -114,7 +116,7 @@ class SarApp extends StatelessWidget {
           }),
           hourMinuteTextColor: WidgetStateColor.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const Color(0xFF284A63);
+              return const Color(0xFF111317);
             }
             return const Color(0xFF353535);
           }),
@@ -136,7 +138,7 @@ class SarApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFF284A63), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFF111317), width: 1.5),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           filled: true,

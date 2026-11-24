@@ -96,21 +96,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF284A63),
+                      color: const Color(0xFF111317),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Image.asset('assets/logo.png', color: Colors.white),
+                      padding: const EdgeInsets.all(14),
+                      child: Image.asset('assets/logo.png'),
                     ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'SAR Employee',
+                    'PROMS',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 30,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF284A63),
+                      letterSpacing: 2,
+                      color: Color(0xFF111317),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -186,9 +187,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: _loading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF284A63),
+                        backgroundColor: const Color(0xFF111317),
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFF284A63).withValues(alpha: 0.6),
+                        disabledBackgroundColor: const Color(0xFF111317).withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 2,
                       ),

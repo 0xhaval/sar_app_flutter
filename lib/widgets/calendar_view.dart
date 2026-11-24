@@ -151,7 +151,7 @@ class _CalendarViewState extends State<CalendarView> {
                     decoration: BoxDecoration(
                       color: attendance != null ? _getStatusColor(attendance.status) : const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(8),
-                      border: isToday ? Border.all(color: const Color(0xFF284A63), width: 2) : null,
+                      border: isToday ? Border.all(color: const Color(0xFF111317), width: 2) : null,
                     ),
                     child: Center(
                       child: Text(

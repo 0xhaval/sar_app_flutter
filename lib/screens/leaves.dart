@@ -159,7 +159,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF284A63),
+                      backgroundColor: const Color(0xFF111317),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -240,7 +240,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
           // Header
           Container(
             width: double.infinity,
-            color: const Color(0xFF284A63),
+            color: const Color(0xFF111317),
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +257,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
                       label: const Text('تقديم طلب'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF284A63),
+                        foregroundColor: const Color(0xFF111317),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

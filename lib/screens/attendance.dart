@@ -229,7 +229,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF284A63),
+                      backgroundColor: const Color(0xFF111317),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -266,7 +266,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     switch (status) {
       case 'present': return const Color(0xFF15803D);
       case 'half-day': return const Color(0xFFA16207);
-      case 'leave': return const Color(0xFF284A63);
+      case 'leave': return const Color(0xFF111317);
       default: return const Color(0xFFDC2626);
     }
   }
@@ -287,7 +287,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
               gradient: LinearGradient(
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
-                colors: [Color(0xFF3B6E71), Color(0xFF284A63)],
+                colors: [Color(0xFF2B2F36), Color(0xFF111317)],
               ),
             ),
             padding: const EdgeInsets.all(24),

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.sar" "\0"
-            VALUE "FileDescription", "sar_app" "\0"
+            VALUE "CompanyName", "PROMS" "\0"
+            VALUE "FileDescription", "PROMS" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "sar_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.sar. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 PROMS. All rights reserved." "\0"
             VALUE "OriginalFilename", "sar_app.exe" "\0"
-            VALUE "ProductName", "sar_app" "\0"
+            VALUE "ProductName", "PROMS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
+import 'theme/brand.dart';
 import 'screens/dashboard.dart';
 import 'screens/leaves.dart';
 import 'screens/attendance.dart';
@@ -52,9 +53,9 @@ class _AppShellState extends State<AppShell> {
         ),
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: Brand.primary,
             border: Border(
-              top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              top: BorderSide(color: Color(0x33D4AF37), width: 1),
             ),
           ),
           child: SafeArea(
@@ -101,7 +102,7 @@ class _AppShellState extends State<AppShell> {
                     isActive ? activeIcon : icon,
                     key: ValueKey<bool>(isActive),
                     size: 24,
-                    color: isActive ? const Color(0xFF284A63) : const Color(0xFF353535),
+                    color: isActive ? Brand.gold : const Color(0xFF9CA3AF),
                   ),
                 ),
               ),
@@ -110,7 +111,7 @@ class _AppShellState extends State<AppShell> {
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: 12,
-                  color: isActive ? const Color(0xFF284A63) : const Color(0xFF353535),
+                  color: isActive ? Brand.gold : const Color(0xFF9CA3AF),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
                 child: Text(label),

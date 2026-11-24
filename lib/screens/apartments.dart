@@ -58,7 +58,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
   Color _getStatusTextColor(String status) {
     switch (_normStatus(status)) {
       case 'vacant': return const Color(0xFF15803D);
-      case 'occupied': return const Color(0xFF284A63);
+      case 'occupied': return const Color(0xFF111317);
       case 'reserved': return const Color(0xFF1E40AF);
       case 'sold': return const Color(0xFFB91C1C);
       default: return const Color(0xFFC2410C);
@@ -967,7 +967,7 @@ class _ApartmentsScreenState extends State<ApartmentsScreen> {
             Row(children: [
               _buildInfoTile(Icons.monetization_on, numberFormat.format(price), 'د.ع/شهر', const Color(0xFF16A34A)),
               const SizedBox(width: 8),
-              _buildInfoTile(Icons.bed, '$bedrooms', 'غرف', const Color(0xFF284A63)),
+              _buildInfoTile(Icons.bed, '$bedrooms', 'غرف', const Color(0xFF111317)),
               const SizedBox(width: 8),
               _buildInfoTile(Icons.bathtub, '$bathrooms', 'حمامات', const Color(0xFF9333EA)),
               const SizedBox(width: 8),

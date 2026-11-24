@@ -16,7 +16,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.sar.sar_app"
+    namespace = "com.proms.employee"
     compileSdk = flutter.compileSdkVersion
     // ndkVersion intentionally unset: this project has no native plugins,
     // so we skip the NDK install. Re-add `ndkVersion = flutter.ndkVersion`
@@ -32,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sar.employee"
+        applicationId = "com.proms.employee"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

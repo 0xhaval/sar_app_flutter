@@ -108,7 +108,7 @@ Future<Map<String, String>?> _showStatusSheet(
                                 'description': noteController.text.trim(),
                               }),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF284A63),
+                        backgroundColor: const Color(0xFF111317),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('حفظ'),
@@ -201,7 +201,7 @@ Future<String?> _showNoteSheet(BuildContext context) {
                           : () =>
                               Navigator.of(ctx).pop(noteController.text.trim()),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF284A63),
+                        backgroundColor: const Color(0xFF111317),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('حفظ'),
@@ -363,7 +363,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0xFF284A63), Color(0xFF0D9488)],
+                  colors: [Color(0xFF111317), Color(0xFF0D9488)],
                 ),
               ),
               padding: const EdgeInsets.all(24),
@@ -508,7 +508,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             child: Material(
               elevation: 6,
               borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFF284A63),
+              color: const Color(0xFF111317),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -917,7 +917,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('تفاصيل العميل'),
-          backgroundColor: const Color(0xFF284A63),
+          backgroundColor: const Color(0xFF111317),
           foregroundColor: Colors.white,
         ),
         body: _loading
@@ -968,7 +968,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             gradient: const LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0xFF284A63), Color(0xFF0D9488)],
+              colors: [Color(0xFF111317), Color(0xFF0D9488)],
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -982,7 +982,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   name.isEmpty ? '?' : name.characters.first,
                   style: const TextStyle(
                     fontSize: 22,
-                    color: Color(0xFF284A63),
+                    color: Color(0xFF111317),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1142,7 +1142,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               icon: const Icon(Icons.flag),
               label: const Text('تغيير الحالة'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF284A63),
+                backgroundColor: const Color(0xFF111317),
                 foregroundColor: Colors.white,
               ),
             ),
@@ -1161,8 +1161,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               icon: const Icon(Icons.note_add_outlined),
               label: const Text('إضافة ملاحظة'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF284A63),
-                side: const BorderSide(color: Color(0xFF284A63)),
+                foregroundColor: const Color(0xFF111317),
+                side: const BorderSide(color: Color(0xFF111317)),
               ),
             ),
           ),
@@ -1487,7 +1487,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('إضافة عميل'),
-          backgroundColor: const Color(0xFF284A63),
+          backgroundColor: const Color(0xFF111317),
           foregroundColor: Colors.white,
         ),
         body: Form(
@@ -1577,7 +1577,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                 child: ElevatedButton(
                   onPressed: _saving ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF284A63),
+                    backgroundColor: const Color(0xFF111317),
                     foregroundColor: Colors.white,
                   ),
                   child: _saving

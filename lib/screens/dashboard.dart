@@ -49,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      {'icon': Icons.calendar_today, 'label': 'رصيد الإجازات', 'value': '$_leaveBalance يوم', 'color': const Color(0xFF284A63)},
+      {'icon': Icons.calendar_today, 'label': 'رصيد الإجازات', 'value': '$_leaveBalance يوم', 'color': const Color(0xFF111317)},
       {'icon': Icons.access_time, 'label': 'ساعات هذا الشهر', 'value': '${_monthlyHours.toStringAsFixed(0)} ساعة', 'color': const Color(0xFF16A34A)},
       {'icon': Icons.assignment_turned_in, 'label': 'الطلبات المعلقة', 'value': '$_pendingRequests', 'color': const Color(0xFFEA580C)},
       {'icon': Icons.trending_up, 'label': 'معدل الحضور', 'value': '%$_attendanceRate', 'color': const Color(0xFF9333EA)},
@@ -65,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF284A63), Color(0xFF3B6E71)],
+                colors: [Color(0xFF111317), Color(0xFF2B2F36)],
               ),
             ),
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
